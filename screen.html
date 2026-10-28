@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko" class="tv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학교 화면 · 30초 지구 라이브</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="tv">
+<div class="boot" id="boot">불러오는 중… 이 글자가 계속 보이면 폴더의 <b>start-demo.bat</b>으로 열어 주세요.</div>
+<header class="s-top">
+  <span class="onair" id="onair">ON AIR</span>
+  <div class="s-stage" id="stageName"></div>
+  <div class="s-school" id="schoolName"></div>
+  <span class="conn" id="conn"></span>
+</header>
+<main class="s-main" id="view"></main>
+<div class="stage" id="stage" hidden></div>
+<div class="s-start" id="start"><button>📺 화면을 한 번 눌러 주세요<small>소리가 켜지고 전체 화면이 돼요</small></button></div>
+<script type="module" src="js/screen.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>교사 진행판 · 30초 지구 라이브</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="teacher">
+<div class="boot" id="boot">불러오는 중… 이 글자가 계속 보이면 폴더의 <b>start-demo.bat</b>으로 열어 주세요.</div>
+<form class="m-join" id="login" hidden>
+  <div class="brand"><span class="onair live">ON AIR</span><h1>교사 로그인</h1></div>
+  <p class="muted" style="margin:0">Firebase 콘솔에서 만든 교사 계정으로 들어가요. 이 브라우저에서는 로그인이 유지돼요.</p>
+  <label>이메일<input id="lEmail" type="email" autocomplete="username" required></label>
+  <label>비밀번호<input id="lPw" type="password" autocomplete="current-password" required></label>
+  <button class="btn cue m-go" type="submit">로그인 ▶</button>
+  <p class="err" id="lErr" role="alert"></p>
+</form>
+<div class="t-wrap">
+  <header class="t-top">
+    <div class="brand"><span class="onair" id="onair">ON AIR</span><h1 id="title"></h1></div>
+    <div class="right"><span class="codebox">세션 <span id="codeTxt"></span></span><span class="conn" id="conn"></span><button class="snd" id="snd"></button></div>
+  </header>
+
+  <nav class="t-stages" aria-label="수업 단계">
+    <button class="btn" id="prev">◀ 이전</button>
+    <div class="chips" id="chips"></div>
+    <button class="btn cue" id="next">다음 ▶</button>
+  </nav>
+
+  <section class="panel" id="pTeams">
+    <div class="ph"><h2>👥 팀 대시보드</h2><span class="muted small" id="teamsSum"></span></div>
+    <div class="t-teams" id="teams"></div>
+  </section>
+
+  <div class="t-grid">
+    <section class="panel" data-stages="make" id="pTimer">
+      <div class="ph"><h2>⏱ 제작 타이머</h2><span class="muted small">모든 화면에 같은 시간이 보여요</span></div>
+      <div class="clock" id="clock">00:00</div>
+      <div class="bar"><span id="bar"></span></div>
+      <div class="row">
+        <button class="btn go" id="tStart">▶ 시작</button>
+        <button class="btn" id="tPlus">+1분</button>
+        <button class="btn" id="tReset">↺ 리셋</button>
+        <input type="number" id="tMin" min="5" max="40" aria-label="제작 시간(분)"><span class="muted">분</span>
+      </div>
+      <div class="cues" id="cues"></div>
+      <p class="muted small">시간이 되면 알림이 자동으로 나가요. 목록을 누르면 그 알림을 다시 보내요.</p>
+    </section>
+
+    <section class="panel" data-stages="grammar" id="pQuiz">
+      <div class="ph"><h2>🎯 3초 스킵 퀴즈</h2><span class="muted small">열기 → 마감 → 결과 공개</span></div>
+      <div class="order" id="quiz"></div>
+      <div class="row" id="quizPanels"></div>
+    </section>
+
+    <section class="panel" data-stages="premiere" id="pPrem">
+      <div class="ph"><h2>🎬 프리미어</h2><span class="muted small">팀을 누르면 모든 화면에서 3·2·1</span></div>
+      <div class="premnow" id="premNow"></div>
+      <div class="row">
+        <button class="btn red" id="pPlay">▶ 바로 상영</button>
+        <button class="btn" id="pBehind">비하인드로 ▶</button>
+        <button class="btn" id="pRestart">↺ 처음부터</button>
+        <button class="btn cue" id="pNext">다음 팀 ▶</button>
+        <button class="btn" id="pClose">무대 내리기</button>
+      </div>
+      <div class="order" id="order"></div>
+    </section>
+
+    <section class="panel" data-stages="intro premiere reflect" id="pGauge">
+      <div class="ph"><h2>🌍 지구 회복 게이지</h2><span class="muted small" id="gGoal"></span></div>
+      <div class="g-top"><div class="big" id="gNum"></div><div class="t-cells"><div class="cells" id="gCells"></div></div></div>
+      <div class="rules" id="gRules"></div>
+      <div class="rule"><span>직접 맞추기</span><span class="row"><input type="number" id="gSet" min="0" aria-label="게이지 칸 수"><button class="btn" id="gSetBtn">설정</button><button class="btn" data-add="1">+1</button><button class="btn" data-add="3">+3</button><button class="btn" data-add="-1">−1</button></span></div>
+    </section>
+
+    <section class="panel" data-stages="" id="pAlert">
+      <div class="ph"><h2>🔔 알림 보내기</h2><span class="muted small">모든 학교 화면·팀 화면에 5초</span></div>
+      <div class="presets" id="presets"></div>
+      <form class="custom" id="customForm">
+        <input type="text" id="customText" maxlength="60" placeholder="직접 알림 쓰기 (예: 정곡초 업로드 완료! 👏)">
+        <button class="btn cue" type="submit">알림 띄우기</button>
+      </form>
+    </section>
+
+    <section class="panel" data-stages="" id="pSession">
+      <div class="ph"><h2>🔑 세션 관리</h2><span class="muted small" id="members"></span></div>
+      <div class="bigcode" id="codeBig"></div>
+      <p class="muted small" style="margin:0">학교 화면과 팀 기기에서 이 코드를 넣어요. 팀 PIN은 팀마다 따로 나눠 주세요.</p>
+      <table class="pins" id="pins"></table>
+      <div class="row" id="links"></div>
+      <div class="row">
+        <button class="btn" id="export">📦 수업 기록 내보내기</button>
+        <button class="btn" id="newSess">새 세션 코드</button>
+        <button class="btn red" id="reset">전체 초기화</button>
+      </div>
+    </section>
+  </div>
+</div>
+<script type="module" src="js/teacher.js"></script>
+</body>
+</html>

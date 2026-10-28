@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>보안 점검 · 30초 지구 라이브</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="boot" id="boot">불러오는 중… 이 글자가 계속 보이면 폴더의 <b>start-demo.bat</b>으로 열어 주세요.</div>
+<main class="h-wrap">
+  <header class="brand"><span class="onair live">CHECK</span><h1>🛡 보안 규칙 점검</h1></header>
+  <p class="muted" style="margin:0">이 탭은 <b>팀 기기 한 대인 척</b>하고, 하면 안 되는 일을 일부러 시도해 봐요. 모두 ✅면 규칙이 제대로 막고 있는 거예요.
+    수업 데이터는 거의 건드리지 않지만(첫 팀의 훅을 같은 값으로 다시 쓰기 한 번), 수업 전에 해 보고 끝나면 <b>전체 초기화</b>를 해 주세요.</p>
+  <form class="row" id="f">
+    <label class="h-code">세션 코드 <input id="code" type="text" maxlength="6" autocomplete="off"></label>
+    <label class="h-code"><span id="pinLabel">팀 PIN</span> <input id="pin" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" style="width:140px"></label>
+    <button class="btn cue" type="submit">점검 시작 ▶</button>
+  </form>
+  <p class="err" id="err" role="alert"></p>
+  <table class="rc" id="out"></table>
+  <p class="h-mode" id="sum" hidden></p>
+</main>
+<script type="module" src="js/rules-check.js"></script>
+</body>
+</html>

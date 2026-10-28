@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30초 지구 라이브</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="home">
+<div class="boot" id="boot">불러오는 중… 이 글자가 계속 보이면 폴더의 <b>start-demo.bat</b>으로 열어 주세요.</div>
+<main class="h-wrap">
+  <header class="brand"><span class="onair live">ON AIR</span><h1 id="title"></h1></header>
+  <p class="muted" id="sub"></p>
+  <label class="h-code">세션 코드 <input id="code" type="text" maxlength="6" autocomplete="off" spellcheck="false" placeholder="K7P2"></label>
+  <div class="h-roles">
+    <section class="h-role">
+      <h2>🎛 교사</h2>
+      <p>수업 진행 조종석 (의령초 교사 PC)</p>
+      <button class="btn cue" id="tNew">새 수업 시작 (새 코드)</button>
+      <button class="btn" id="tGo">이 코드로 이어서 하기</button>
+    </section>
+    <section class="h-role">
+      <h2>📺 학교 화면</h2>
+      <p>교실 TV · 보기 전용</p>
+      <div class="row" id="schools"></div>
+    </section>
+    <section class="h-role">
+      <h2>📱 팀</h2>
+      <p>팀별 아이북 · 팀 PIN 필요</p>
+      <button class="btn go" id="teamGo">팀으로 들어가기</button>
+    </section>
+  </div>
+  <p class="err" id="err" role="alert"></p>
+  <p class="h-mode" id="mode"></p>
+</main>
+<script type="module" src="js/index.js"></script>
+</body>
+</html>

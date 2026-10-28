@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>팀 화면 · 30초 지구 라이브</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="mobile">
+<div class="boot" id="boot">불러오는 중… 이 글자가 계속 보이면 폴더의 <b>start-demo.bat</b>으로 열어 주세요.</div>
+
+<form class="m-join" id="join" hidden>
+  <div class="brand"><span class="onair live">ON AIR</span><h1 id="title"></h1></div>
+  <label>세션 코드<input id="jCode" type="text" maxlength="6" autocomplete="off" spellcheck="false"></label>
+  <div><b>우리 팀</b><div class="m-teams" id="jTeams" style="margin-top:6px"></div></div>
+  <label>팀 PIN (4자리)<input id="jPin" type="tel" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+  <button class="btn cue m-go" type="submit">들어가기 ▶</button>
+  <p class="err" id="jErr" role="alert"></p>
+</form>
+
+<div id="app" hidden>
+  <header class="m-top">
+    <span class="team" id="me"></span>
+    <span class="m-stage" id="stageName"></span>
+    <span class="conn" id="conn"></span>
+    <button class="snd" id="snd"></button>
+  </header>
+  <main class="m-main" id="view"></main>
+</div>
+<div class="sheet" id="sheet" hidden></div>
+<script type="module" src="js/team.js"></script>
+</body>
+</html>
