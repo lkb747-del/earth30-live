@@ -28,23 +28,38 @@ $('#start').onclick = () => {
 const gaugeBlock = (v) => `<div class="gwrap"><div class="cells">${gaugeCells(v, L)}</div>
   <div class="gside"><div class="earth">🌍</div><div class="big">${v}<small>/${L.gauge.max}</small></div><div class="muted">목표 ${L.gauge.goal}칸</div></div></div>`;
 
+/** 심각도 손가락: 팀마다 처음 → 지금 */
+const sevBoard = () => `<div class="s-sev">${ORDER.map((t) => {
+  const s = S.teams?.[t.id]?.severity || {};
+  const diff = s.before && s.after ? s.after - s.before : null;
+  return `<div class="sv" style="--c:${t.color}"><span class="no" style="background:${t.color}">${t.goal}</span><b>${esc(t.name)}</b>
+    <span class="n">${s.before ?? '–'}</span><span class="ar">→</span><span class="n now">${s.after ?? '–'}</span><span class="d">${diff ? (diff > 0 ? `▲${diff}` : `▼${-diff}`) : ''}</span></div>`;
+}).join('')}</div>`;
+
 const VIEWS = {
-  intro: (c) => `<div class="s-intro"><div>
-      <div class="kicker">${esc(L.date)} · ${esc(T.schools.map((s) => s.name).join(' · '))}</div>
+  intro: (c) => {
+    const nSev = ORDER.filter((t) => S.teams?.[t.id]?.severity?.before).length;
+    return `<div class="s-intro"><div>
+      <div class="kicker">${esc(L.intro.feed)}</div>
       <h2 class="s-title">${esc(L.title)}</h2>
       <div class="s-problem"><span class="tag">배움 문제</span><br>${esc(L.problem)}</div>
-    </div><div>${gaugeBlock(gaugeV(c, L))}</div></div>`,
+      <div class="s-acts">${L.intro.activities.map((a) => `<div><b>${esc(a.name)}</b>${esc(a.text)}</div>`).join('')}</div>
+    </div><div>${gaugeBlock(gaugeV(c, L))}<div class="s-next">🖐 ${esc(L.severity.title)} <b>${nSev}/${ORDER.length}팀</b></div></div></div>`;
+  },
 
   grammar: (c) => {
     const q = c.quiz || {};
     if (q.panel === 'formula') return `<div class="s-list"><div class="kicker">쇼츠 공식</div><ol>${L.formula.map((f) => `<li>${esc(f)}</li>`).join('')}</ol></div>`;
     if (q.panel === 'promises') return `<div class="s-list"><div class="kicker">크리에이터 약속</div><ul>${L.promises.map((f) => `<li>✋ ${esc(f)}</li>`).join('')}</ul></div>`;
     const p = POLLS.find((x) => x.id === q.poll);
-    if (!p) return `<div class="s-list"><div class="kicker">${esc(L.quiz[0].title)}</div><h2 class="s-h">${esc(L.quiz[0].ask)}</h2><div class="s-status">곧 시작해요! 팀 기기를 준비해 주세요 📱</div></div>`;
+    if (!p) return `<div class="s-list"><div class="kicker">${esc(L.quiz[0].title)}</div><h2 class="s-h">${esc(L.quiz[0].ask)}</h2><div class="s-status">곧 시작해요!</div></div>`;
     const votes = S.votes?.[p.id] || {};
     const n = Object.keys(votes).length;
+    const reveal = p.q.reveal && p.id === POLLS[POLLS.length - 1].id ? `<div class="s-reveal">${esc(p.q.reveal)}</div>` : '';
     let side;
-    if (q.open) side = `<div class="s-status live">🟢 투표 중 · ${n}/${T.teams.length}팀</div>`;
+    // 손 투표(기본): 화면에는 카드와 보기만, 결과는 카메라로 본다
+    if (!q.device) side = q.revealed && reveal ? reveal : `<div class="s-status live">${esc(L.quizVote.hand)}</div><div class="s-legend">${p.options.map((o) => esc(o.label)).join(' · ')}</div><div class="s-legend">${esc(L.quizVote.handOrder)}</div>`;
+    else if (q.open) side = `<div class="s-status live">🟢 투표 중 · ${n}/${T.teams.length}팀</div>`;
     else if (!q.revealed) side = `<div class="s-status">🔒 마감! 결과는 잠시 후 공개</div>`;
     else {
       // 학교마다 한 줄. 막대 옆에는 보기의 첫 글자(✋·👉·A·B)만, 뜻은 위에 한 번만 적는다
@@ -56,7 +71,7 @@ const VIEWS = {
           const k = ts.filter((t) => votes[t.id] === o.id).length;
           return `<div class="bar2"><span>${esc(short(o))}</span><div class="track"><span style="width:${ts.length ? (k / ts.length) * 100 : 0}%"></span></div><b>${k}</b></div>`;
         }).join('')}</div>`;
-      }).join('') + (p.q.reveal && p.id === POLLS[POLLS.length - 1].id ? `<div class="s-reveal">${esc(p.q.reveal)}</div>` : '');
+      }).join('') + reveal;
     }
     const cards = p.cards.map((cd) => `<div class="qcard"><span class="qid">${esc(cd.id)}</span><p>${nl2br(cd.text)}</p></div>`).join('');
     return `<div class="s-quiz"><div class="qcards">${cards}</div><div class="qside"><div class="kicker">${esc(p.label)}</div><h2>${esc(p.q.ask)}</h2>${side}</div></div>`;
@@ -65,12 +80,12 @@ const VIEWS = {
   // 팀이 많은 학교(의령초 5팀)는 2열로, 재료 칩은 번호만 이름 줄 오른쪽에
   plan: () => {
     const many = MINE.length > 2;
-    return `<div>${many ? '' : '<div class="kicker">훅 슬롯 · 훅 고르기 · 4컷 재료</div>'}<h2 class="s-h">우리 학교 팀의 첫 3초</h2>
+    return `<div>${many ? '' : '<div class="kicker">첫 3초 훅 · ④ 우리의 실천 · 4컷 재료</div>'}<h2 class="s-h">우리 학교 팀의 첫 3초</h2>
     <div class="s-hooks">${MINE.map((t) => {
       const d = S.teams?.[t.id] || {};
       const chips = `<div class="pchips">${L.prepChecklist.map((x, i) => { const name = x.split(':')[0]; return `<span class="${d.prep?.['c' + (i + 1)] ? 'on' : ''}" title="${esc(name)}">${esc(many ? name.split(' ')[0] : name)}</span>`; }).join('')}</div>`;
       return `<div class="s-hook" style="--c:${t.color}"><div class="who"><span class="no" style="background:${t.color}">${t.goal}</span>${esc(t.name)}${many ? chips : ''}</div>
-        <div class="h">${d.hook ? `“${esc(d.hook)}”` : '<span class="muted">훅 고르는 중… 🎰</span>'}</div>${many ? '' : chips}</div>`;
+        <div class="h">${d.hook ? `“${esc(d.hook)}”` : '<span class="muted">훅 고르는 중…</span>'}</div>${many ? '' : `<div class="act">④ ${esc(t.action)}</div>${chips}`}</div>`;
     }).join('')}</div></div>`;
   },
 
@@ -87,11 +102,19 @@ const VIEWS = {
       <div class="s-order">${ORDER.map((t, i) => `<div class="o ${done[t.id] ? 'done' : ''} ${t === nx ? 'next' : ''}"><span class="idx">${i + 1}</span><span class="no" style="background:${t.color}">${t.goal}</span>${esc(t.school)} ${esc(t.name)}<span class="hs">${done[t.id] ? `💖 ${sum(S.hearts?.[t.id])} ✓` : ''}</span></div>`).join('')}</div></div>`;
   },
 
+  // 배움 정리: 교사가 고른 소단계(reflectStep)마다 화면이 바뀐다
   reflect: (c) => {
     const v = gaugeV(c, L), R = L.reflect;
-    return `<div class="s-reflect"><div><h2 class="s-q">${esc(R.question)}</h2><div class="s-ans">${R.answers.map((a) => `<div>${esc(a)}</div>`).join('')}</div><p class="s-sentence">${esc(R.sentence)}</p></div>
-      <div>${gaugeBlock(v)}<div class="s-missions">${T.schools.map((s) => `<span class="${S.missions?.[s.id] ? 'on' : ''}">🕵️ ${esc(s.name)}${S.missions?.[s.id] ? ' ✓' : ''}</span>`).join('')}</div>
-      ${v >= L.gauge.goal ? `<p class="s-cele">${esc(v >= L.gauge.max ? L.gauge.celebrate100 : L.gauge.celebrate80)}</p>` : ''}</div></div>`;
+    const step = c.reflectStep || R.steps[0].id;
+    const gauge = `<div>${gaugeBlock(v)}<div class="s-missions">${T.schools.map((s) => `<span class="${S.missions?.[s.id] ? 'on' : ''}">🕵️ ${esc(s.name)}${S.missions?.[s.id] ? ' ✓' : ''}</span>`).join('')}</div>
+      ${v >= L.gauge.goal ? `<p class="s-cele">${esc(v >= L.gauge.max ? L.gauge.celebrate100 : L.gauge.celebrate80)}</p>` : ''}</div>`;
+    const sev = L.severity;
+    if (step === 'severity') return `<div><div class="kicker">🖐 ${esc(sev.title)} · ${esc(sev.beforeLabel)} → ${esc(sev.afterLabel)}</div><h2 class="s-h">${esc(sev.askAfter)}</h2>${sevBoard()}</div>`;
+    if (step === 'promise') return `<div class="s-list"><div class="kicker">✍️ ${esc(R.promise.title)}</div><h2 class="s-q">“${esc(R.promise.card)}”</h2><div class="s-status live">${esc(R.promise.note)}</div></div>`;
+    if (step === 'stars') return `<div class="s-list"><div class="kicker">⭐ ${esc(R.stars.title)} · ${esc(R.stars.how)}</div><ol>${R.stars.items.map((f) => `<li>${esc(f)}</li>`).join('')}</ol></div>`;
+    if (step === 'gauge') return `<div class="s-gauge">${gauge}</div>`;
+    if (step === 'next') return `<div class="s-list"><div class="kicker">${esc(R.next.title)}</div><h2 class="s-q">${esc(R.next.text)}</h2></div>`;
+    return `<div class="s-reflect"><div><h2 class="s-q">${esc(R.question)}</h2><div class="s-ans">${R.answers.map((a) => `<div>${esc(a)}</div>`).join('')}</div><p class="s-sentence">${esc(R.sentence)}</p></div>${gauge}</div>`;
   },
 };
 

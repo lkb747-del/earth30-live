@@ -1,6 +1,7 @@
 // 교사 진행판: 수업 상태(control)와 지구 회복 게이지를 쓰는 유일한 화면.
 // 업로드·하트 자동 반영도 이 화면이 팀 데이터를 지켜보다가 계산해서 control/gauge에 쓴다.
 import * as store from './store.js';
+import { FIREBASE_CONFIG } from '../config.js';
 import {
   $, $$, esc, loadData, params, rid, sum, mmss, initialControl, timerState, cueKey, polls,
   premPhase, premOffset, PHASE_NAME, gaugeCells, gaugeV, showAlert, toast, connBadge, soundButton, teamChip,
@@ -92,7 +93,7 @@ $('#next').onclick = () => { const i = L.stages.findIndex((s) => s.id === stageI
 
 /* ── 제작 타이머 (기존 도구판의 타이머를 endAt 동기화 방식으로 바꿈) ── */
 $('#tMin').value = L.makeTimerMinutes;
-let firedLocal = new Set(), stopping = false;
+let firedLocal = new Set(), stopping = false, nudgeMark = -1;
 function renderTimer() {
   const t = timerState(ctl(), now());
   $('#tStart').textContent = t.running ? '⏸ 멈춤' : '▶ 시작';
@@ -125,6 +126,10 @@ function tickTimer() {
   $('#clock').classList.toggle('warn', t.left <= 5 * 60000);
   $('#bar').style.width = `${t.total ? Math.min(100, (t.elapsed / t.total) * 100) : 0}%`;
   if (!t.running) { stopping = false; return; }
+  // 교사 화면에만: N분마다 원격 학교 확인 알림 (저장하지 않음)
+  const mark = Math.floor(t.elapsed / (L.teacherNudge.everyMin * 60000));
+  if (nudgeMark >= 0 && mark > nudgeMark && t.left > 0) toast(L.teacherNudge.icon, `${mark * L.teacherNudge.everyMin}분 · ${L.teacherNudge.msg}`);
+  nudgeMark = mark;
   for (const c of L.cues) {
     const k = cueKey(c);
     if (t.elapsed >= c.at * 60000 && !t.fired[k] && !firedLocal.has(k)) {
@@ -148,24 +153,31 @@ $('#customForm').onsubmit = (e) => {
 /* ── 퀴즈 ── */
 function renderQuiz() {
   const q = ctl().quiz || {};
+  // 손 투표(기본)면 열기 → 공개만, 팀 기기 투표를 켜면 열기 → 마감 → 결과 공개
+  const dev = !!q.device;
   $('#quiz').innerHTML = POLLS.map((p) => {
     const cur = q.poll === p.id;
     const n = Object.keys(S.votes?.[p.id] || {}).length;
-    const st = cur ? (q.open ? '🟢 투표 중' : q.revealed ? '📊 공개됨' : '🔒 마감') : '';
+    const st = cur ? (q.revealed ? '📊 공개됨' : !dev ? '✋ 손 투표 중' : q.open ? '🟢 투표 중' : '🔒 마감') : '';
+    const canReveal = cur && !q.revealed && (!dev || !q.open);
     return `<div class="qrow ${cur ? 'on' : ''}"><div><b>${esc(p.label)}</b><small>${esc(p.cards.map((c) => c.text.split('\n')[0]).join(' / '))}</small></div>
-      <span class="muted small">${n}/${TEAMS.length}팀 ${st}</span>
-      <div class="row"><button class="btn sm go" data-q="open" data-p="${p.id}" ${cur && q.open ? 'disabled' : ''}>열기</button>
-      <button class="btn sm" data-q="close" data-p="${p.id}" ${cur && q.open ? '' : 'disabled'}>마감</button>
-      <button class="btn sm cue" data-q="reveal" data-p="${p.id}" ${cur && !q.open && !q.revealed ? '' : 'disabled'}>결과 공개</button></div></div>`;
+      <span class="muted small">${dev ? `${n}/${TEAMS.length}팀 ` : ''}${st}</span>
+      <div class="row"><button class="btn sm go" data-q="open" data-p="${p.id}" ${cur && q.open && !q.revealed ? 'disabled' : ''}>${dev ? '열기' : '카드 보여 주기'}</button>
+      ${dev ? `<button class="btn sm" data-q="close" data-p="${p.id}" ${cur && q.open ? '' : 'disabled'}>마감</button>` : ''}
+      <button class="btn sm cue" data-q="reveal" data-p="${p.id}" ${canReveal ? '' : 'disabled'}>${dev ? '결과 공개' : '정리하기'}</button></div></div>`;
   }).join('');
   $('#quizPanels').innerHTML = [['formula', '🧪 쇼츠 공식 보여 주기'], ['promises', '🤝 크리에이터 약속 보여 주기']]
-    .map(([k, label]) => `<button class="btn ${q.panel === k ? 'cue' : ''}" data-panel="${k}">${label}</button>`).join('');
+    .map(([k, label]) => `<button class="btn ${q.panel === k ? 'cue' : ''}" data-panel="${k}">${label}</button>`).join('')
+    + `<button class="btn sm ${dev ? 'go' : ''}" id="qDevice">📱 팀 기기 투표 ${dev ? '켜짐' : '꺼짐 (손 투표)'}</button>`;
 }
+$('#quizPanels').addEventListener('click', (e) => {
+  if (e.target.closest('#qDevice')) store.update(C('quiz'), { device: !(ctl().quiz || {}).device, open: false, revealed: false });
+});
 $('#quiz').onclick = (e) => {
   const b = e.target.closest('[data-q]');
   if (!b) return;
   const p = b.dataset.p;
-  if (b.dataset.q === 'open') { store.set(C('quiz'), { poll: p, open: true, revealed: false }); setStage('grammar'); sfx.go(); }
+  if (b.dataset.q === 'open') { store.set(C('quiz'), { poll: p, open: true, revealed: false, device: !!(ctl().quiz || {}).device }); setStage('grammar'); sfx.go(); }
   if (b.dataset.q === 'close') store.update(C('quiz'), { open: false });
   if (b.dataset.q === 'reveal') store.update(C('quiz'), { open: false, revealed: true });
 };
@@ -175,6 +187,21 @@ $('#quizPanels').onclick = (e) => {
   const q = ctl().quiz || {};
   store.update(C('quiz'), { panel: q.panel === b.dataset.panel ? null : b.dataset.panel, open: false });
   setStage('grammar');
+};
+
+/* ── 배움 정리 소단계 ── */
+function renderReflect() {
+  const cur = ctl().reflectStep || L.reflect.steps[0].id;
+  const on = stageId() === 'reflect';
+  $('#rSteps').innerHTML = L.reflect.steps.map((s) => `<button class="team" aria-pressed="${on && cur === s.id}" data-rs="${s.id}" style="--c:var(--cue)">${esc(s.label)}</button>`).join('');
+  const sv = TEAMS.map((t) => S.teams?.[t.id]?.severity || {});
+  $('#sevSum').textContent = `🖐 ${L.severity.beforeLabel} ${sv.filter((s) => s.before).length}/${TEAMS.length} · ${L.severity.afterLabel} ${sv.filter((s) => s.after).length}/${TEAMS.length}팀`;
+}
+$('#rSteps').onclick = (e) => {
+  const b = e.target.closest('[data-rs]');
+  if (!b) return;
+  store.set(C('reflectStep'), b.dataset.rs);
+  setStage('reflect');
 };
 
 /* ── 프리미어 (기존 도구판의 프리미어 연출: 3·2·1 → 팀 소개 → 30초 링 → 비하인드) ── */
@@ -298,8 +325,9 @@ function renderTeams() {
     if (ask && seenSos[t.id] !== d.sos.at) { seenSos[t.id] = d.sos.at; sfx.sos(); toast('🆘', `${t.name}: ${d.sos.q}`); }
     return `<article class="tcard ${ask ? 'alarm' : ''}" style="--c:${t.color}">
       <header><span class="no" style="background:${t.color}">${t.goal}</span><div><b>${esc(t.name)}</b><small>${esc(t.school)} · ${esc(t.goalName)}</small></div><span class="dot ${on ? 'on' : ''}" title="${on ? '접속 중' : '접속 안 됨'}"></span></header>
-      <div class="hook">${d.hook ? `“${esc(d.hook)}”` : `<span class="muted">훅 고르는 중 (슬롯 ${d.spins || 0}/${L.hookSlot.maxSpins})</span>`}</div>
+      <div class="hook">${d.hook ? `“${esc(d.hook)}”` : '<span class="muted">훅 고르는 중</span>'}</div>
       <div class="cutline">재료 ${prep}/${L.prepChecklist.length} · 컷 ${cuts}</div>
+      <div class="cutline">🖐 ${d.severity?.before ?? '–'} → ${d.severity?.after ?? '–'}${d.promise ? ' · ✍️ 약속 카드' : ''}</div>
       ${d.uploaded ? '<div class="up">📤 업로드 완료</div>' : ''}
       ${ask ? `<div class="sos"><b>🆘 ${esc(d.sos.q)}</b><button class="btn sm" data-resolve="${t.id}">해결</button></div>` : ''}
     </article>`;
@@ -320,7 +348,7 @@ function renderPins() {
 }
 $('#links').innerHTML = T.schools.map((s) => `<a class="btn sm" target="_blank" rel="noopener" href="screen.html?code=${code}&school=${s.id}">📺 ${esc(s.name)} 화면 열기</a>`).join('')
   + `<a class="btn sm" target="_blank" rel="noopener" href="team.html?code=${code}">📱 팀 화면 열기</a>`
-  + (store.isDemo ? '' : `<a class="btn sm" target="_blank" rel="noopener" href="rules-check.html?code=${code}">🛡 보안 점검</a><button class="btn sm" id="logout">로그아웃 (${esc(email)})</button>`);
+  + (store.isDemo ? (FIREBASE_CONFIG ? '<a class="btn sm cue" href="index.html?demo=0">🔥 실시간 모드로 바꾸기 (보안 점검은 실시간 모드에서)</a>' : '') : `<a class="btn sm" target="_blank" rel="noopener" href="rules-check.html?code=${code}">🛡 보안 점검</a><button class="btn sm" id="logout">로그아웃 (${esc(email)})</button>`);
 $('#logout')?.addEventListener('click', async () => { await store.logout(); location.href = 'index.html'; });
 $('#export').onclick = async () => {
   const data = { exportedAt: new Date().toISOString(), code, lesson: L.title, session: await store.get(base) };
@@ -342,7 +370,7 @@ $('#reset').onclick = async () => {
 
 /* ── 연결 ── */
 function render() {
-  renderStages(); renderTimer(); renderQuiz(); renderPrem(); renderGauge(); renderTeams();
+  renderStages(); renderTimer(); renderQuiz(); renderReflect(); renderPrem(); renderGauge(); renderTeams();
   showAlert(ctl().alert, now());
   autoApply();
 }

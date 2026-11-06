@@ -1,7 +1,7 @@
 // 팀 화면(아이북): 자기 팀 칸(teams/{teamId})과 투표·하트·피드백만 쓴다.
 import * as store from './store.js';
 import {
-  $, $$, esc, loadData, params, mmss, timerState, nextCue, polls, premPhase, gaugeCells, gaugeV,
+  $, esc, loadData, params, mmss, timerState, nextCue, polls, premPhase, gaugeCells, gaugeV,
   gaugeWatcher, flashCells, showAlert, toast, connBadge, soundButton, teamChip, signInAnon, sessionExists, errorToasts,
 } from './ui.js';
 import { sfx, unlockAudio } from './sfx.js';
@@ -10,8 +10,8 @@ import { burst } from './confetti.js';
 const { T, L } = await loadData();
 const P = L.premiere, POLLS = polls(L), now = store.serverNow;
 const ORDER = T.premiereOrder.map((id) => T.teams.find((t) => t.id === id));
-const MAX_SPINS = L.hookSlot.maxSpins;
-let me, base, tb, S = {}, lastHtml = '', spinning = false, sosOpen = false;
+const SEV = L.severity, H = L.hookPick;
+let me, base, tb, S = {}, lastHtml = '', sosOpen = false;
 const received = [];
 
 $('#title').textContent = L.title;
@@ -72,15 +72,27 @@ function start(code, teamId) {
 
 const my = () => S.teams?.[me.id] || {};
 
+/** 심각도 손가락(1~5): 모둠 평균을 한 번 누른다. kind = before(배움 열기) | after(배움 정리) */
+function sevPicker(kind) {
+  const cur = my().severity?.[kind];
+  const nums = Array.from({ length: SEV.max - SEV.min + 1 }, (_, i) => SEV.min + i);
+  const before = kind === 'after' && my().severity?.before;
+  return `<section class="m-card m-sev"><h3>🖐 ${esc(SEV.title)}${before ? ` <small class="muted">${esc(SEV.beforeLabel)} ${before}</small>` : ''}</h3>
+    <p>${esc(kind === 'after' ? SEV.askAfter : SEV.askBefore)}</p>
+    <div class="sevs">${nums.map((n) => `<button class="sev ${cur === n ? 'on' : ''}" data-act="sev" data-k="${kind}" data-v="${n}">${n}</button>`).join('')}</div>
+    <small class="muted">${esc(SEV.note)}</small></section>`;
+}
+
 /* ── 단계별 화면 ── */
 const VIEWS = {
-  intro: () => `<div class="m-hero" style="--c:${me.color}"><div class="goal">${me.goal}</div><div class="tname">${esc(me.name)}</div>
-    <div class="sub">${esc(me.school)} · ${esc(me.goalName)}</div><p class="m-wait">곧 시작해요!</p><p class="m-problem">${esc(L.problem)}</p></div>`,
+  intro: () => `<div class="m-two"><div class="m-hero" style="--c:${me.color}"><div class="goal">${me.goal}</div><div class="tname">${esc(me.name)}</div>
+    <div class="sub">${esc(me.school)} · ${esc(me.goalName)}</div><p class="m-problem">${esc(L.problem)}</p></div>${sevPicker('before')}</div>`,
 
   grammar: (c) => {
     const q = c.quiz || {};
     const p = POLLS.find((x) => x.id === q.poll);
     if (!p || q.panel) return `<div class="m-box">📺 학교 화면을 봐 주세요<small>${p ? '' : '퀴즈가 열리면 여기에 버튼이 나와요'}</small></div>`;
+    if (!q.device) return `<div class="m-box">${esc(L.quizVote.handTeam)}<small>${esc(p.q.ask)} · ${esc(p.options.map((o) => o.label).join(' / '))}</small></div>`;
     const mine = S.votes?.[p.id]?.[me.id];
     const note = q.open ? (mine ? '다시 누르면 바꿀 수 있어요' : '하나를 눌러 주세요') : (mine ? '🔒 마감! 학교 화면을 봐 주세요' : '🔒 마감됐어요');
     return `<div class="m-quiz"><div class="kicker">${esc(p.label)}</div><h2>${esc(p.q.ask)}</h2>
@@ -88,14 +100,15 @@ const VIEWS = {
       <p class="m-note">${note}</p></div>`;
   },
 
+  // 훅 고르기: 종이 스토리보드에서 정한 첫 3초 훅을 우리 팀 후보·공통 훅 틀 중에서 골라 교사·학교 화면에 알린다
   plan: () => {
-    const d = my(), spins = d.spins || 0;
-    const spun = Object.keys(d.spun || {}).sort().map((k) => d.spun[k]);
-    const shown = d.hook || spun[spun.length - 1] || '🎰 레버를 당겨요';
-    return `<div class="m-two"><section class="m-card"><h3>🎰 훅 슬롯</h3>
-        <div class="reel"><div class="window"></div><div class="strip" id="strip"><div></div><div>${esc(shown)}</div><div></div></div></div>
-        <button class="spin" data-act="spin" ${spins >= MAX_SPINS ? 'disabled' : ''}>레버 당기기 🎰<small>${MAX_SPINS - spins}번 남음</small></button>
-        ${spun.length ? `<h3>하나 고르기</h3><div class="picks">${spun.map((h) => `<button class="pick ${d.hook === h ? 'on' : ''}" data-act="hook" data-h="${esc(h)}">${d.hook === h ? '✅ ' : ''}“${esc(h)}”</button>`).join('')}</div>` : ''}
+    const d = my();
+    const pick = (h) => `<button class="pick ${d.hook === h ? 'on' : ''}" data-act="hook" data-h="${esc(h)}">${d.hook === h ? '✅ ' : ''}“${esc(h)}”</button>`;
+    const bank = L.hookBank.filter((h) => !me.hooks.includes(h));
+    return `<div class="m-two"><section class="m-card"><h3>🎬 ${esc(H.teamTitle)}</h3>
+        <div class="picks">${me.hooks.map(pick).join('')}</div>
+        <details class="m-bank" ${bank.includes(d.hook) ? 'open' : ''}><summary>${esc(H.bankTitle)}</summary><div class="picks">${bank.map(pick).join('')}</div></details>
+        <div class="m-action" style="--c:${me.color}"><small>${esc(H.actionTitle)}</small><b>“${esc(me.action)}”</b><span>${esc(H.actionNote)}</span></div>
       </section><section class="m-card"><h3>🧺 4컷 재료 준비</h3>
         ${L.prepChecklist.map((x, i) => `<button class="check ${d.prep?.['c' + (i + 1)] ? 'on' : ''}" data-act="prep" data-k="c${i + 1}">${esc(x)}</button>`).join('')}
       </section></div>`;
@@ -108,6 +121,7 @@ const VIEWS = {
         ${received.length ? `<h3>🔔 받은 알림</h3><div class="m-alerts">${received.slice(-3).reverse().map((a) => `<div>${esc(a.icon)} ${esc(a.msg)}</div>`).join('')}</div>` : ''}
       </section><section class="m-card"><h3>🎬 컷 진행</h3>
         ${L.cuts.map((c) => `<button class="check ${d.progress?.[c.id] ? 'on' : ''}" data-act="cut" data-k="${c.id}">${esc(c.name)}<small>${esc(c.sec)}</small></button>`).join('')}
+        <button class="check ${d.promise ? 'on' : ''}" data-act="promise">${esc(L.promiseCheck)}</button>
         <button class="btn upl ${d.uploaded ? 'done' : ''}" data-act="upload" ${d.uploaded ? 'disabled' : ''}>${d.uploaded ? '✅ 시사회관 업로드 완료!' : '📤 시사회관 업로드 완료'}</button>
         <button class="btn sosb ${sos ? 'sent' : ''}" data-act="sos">${sos ? `🆘 선생님께 보냈어요 · ${esc(d.sos.q)}` : '🆘 SOS 도움 요청'}</button>
         <p class="muted small" style="margin:0">플랜 B · ${esc(L.planB)}</p>
@@ -127,11 +141,21 @@ const VIEWS = {
       <div class="fbs">${P.feedback.map((f) => `<button class="fb ${fb[f.id] ? 'on' : ''}" data-act="fb" data-k="${f.id}">${esc(f.label)}</button>`).join('')}</div></div>`;
   },
 
+  // 배움 정리: 교사가 고른 소단계(reflectStep)를 따라간다. 심각도 단계에서만 버튼을 누른다
   reflect: (c) => {
     const v = gaugeV(c, L), R = L.reflect;
-    return `<div class="m-reflect"><h2>${esc(R.question)}</h2><div class="m-ans">${R.answers.map((a) => `<span>${esc(a)}</span>`).join('')}</div>
-      <div class="cells">${gaugeCells(v, L)}</div><div class="big">${v}<small>/${L.gauge.max}칸</small></div>
-      ${v >= L.gauge.goal ? `<p class="m-cele">${esc(v >= L.gauge.max ? L.gauge.celebrate100 : L.gauge.celebrate80)}</p>` : ''}</div>`;
+    const step = c.reflectStep || R.steps[0].id;
+    if (step === 'severity') return `<div class="m-reflect">${sevPicker('after')}</div>`;
+    const gauge = `<div class="cells">${gaugeCells(v, L)}</div><div class="big">${v}<small>/${L.gauge.max}칸</small></div>
+      ${v >= L.gauge.goal ? `<p class="m-cele">${esc(v >= L.gauge.max ? L.gauge.celebrate100 : L.gauge.celebrate80)}</p>` : ''}`;
+    const body = {
+      views: `<h2>${esc(R.question)}</h2><div class="m-ans">${R.answers.map((a) => `<span>${esc(a)}</span>`).join('')}</div><p class="m-problem">${esc(R.sentence)}</p>`,
+      promise: `<h2>✍️ ${esc(R.promise.title)}</h2><p class="m-wait">“${esc(R.promise.card)}”</p><p class="m-problem">${esc(R.promise.note)}</p>`,
+      stars: `<h2>⭐ ${esc(R.stars.title)}</h2><p class="m-problem">${esc(R.stars.how)}</p><div class="m-ans col">${R.stars.items.map((a) => `<span>${esc(a)}</span>`).join('')}</div>`,
+      gauge,
+      next: `<h2>${esc(R.next.title)}</h2><p class="m-wait">${esc(R.next.text)}</p>`,
+    }[step] || gauge;
+    return `<div class="m-reflect">${body}</div>`;
   },
 };
 
@@ -146,10 +170,8 @@ function render() {
   const d = my();
   if (d.sos?.resolved && sosSeen !== d.sos.at) { sosSeen = d.sos.at; toast('🙆', '선생님이 SOS를 확인했어요!'); }
   if (d.sos && !d.sos.resolved) sosSeen = null;
-  if (!spinning) {
-    const html = (VIEWS[st.id] || VIEWS.intro)(c);
-    if (html !== lastHtml) { $('#view').innerHTML = html; lastHtml = html; }
-  }
+  const html = (VIEWS[st.id] || VIEWS.intro)(c);
+  if (html !== lastHtml) { $('#view').innerHTML = html; lastHtml = html; }
   renderSheet();
   watchGauge(gaugeV(c, L));
   tick();
@@ -186,8 +208,9 @@ $('#view').addEventListener('click', (e) => {
       if (q.open) { store.set(`${base}/votes/${q.poll}/${me.id}`, b.dataset.v); sfx.pop(); }
       break;
     }
-    case 'spin': spin(); break;
     case 'hook': store.set(`${tb}/hook`, b.dataset.h); sfx.pop(); break;
+    case 'sev': store.set(`${tb}/severity/${b.dataset.k}`, +b.dataset.v); sfx.pop(); break;
+    case 'promise': store.set(`${tb}/promise`, !d.promise); if (!d.promise) sfx.pop(); break;
     case 'prep': store.set(`${tb}/prep/${b.dataset.k}`, !d.prep?.[b.dataset.k]); break;
     case 'cut': store.set(`${tb}/progress/${b.dataset.k}`, !d.progress?.[b.dataset.k]); if (!d.progress?.[b.dataset.k]) sfx.pop(); break;
     case 'upload':
@@ -214,36 +237,6 @@ $('#view').addEventListener('click', (e) => {
     }
   }
 });
-
-/* 훅 슬롯: 기존 도구판의 슬롯 릴 애니메이션을 가져옴. 팀 후보 3개(2배 가중) + 공통 훅 은행에서 뽑음 */
-function spin() {
-  const d = my(), spins = d.spins || 0;
-  if (spinning || spins >= MAX_SPINS) return;
-  spinning = true;
-  $$('[data-act="spin"]').forEach((b) => { b.disabled = true; });
-  const pool = [...me.hooks, ...me.hooks, ...L.hookBank];
-  const any = (a) => a[Math.floor(Math.random() * a.length)];
-  const final = Math.random() < 0.6 ? any(me.hooks) : any(pool);
-  const items = Array.from({ length: 40 }, () => any(pool));
-  items[37] = final;
-  const strip = $('#strip');
-  strip.style.transition = 'none';
-  strip.style.transform = 'translateY(0)';
-  strip.innerHTML = items.map((h) => `<div>${esc(h)}</div>`).join('');
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    strip.style.transition = 'transform 3.2s cubic-bezier(.12,.75,.15,1)';
-    strip.style.transform = `translateY(${-(37 * 70) + 70}px)`;
-  }));
-  let n = 0;
-  const tk = setInterval(() => { sfx.tick(); if (++n > 26) clearInterval(tk); }, 110);
-  setTimeout(async () => {
-    sfx.win(); burst(80);
-    await store.update(tb, { spins: spins + 1, [`spun/s${spins + 1}`]: final, ...(d.hook ? {} : { hook: final }) });
-    spinning = false;
-    lastHtml = '';
-    render();
-  }, 3300);
-}
 
 function tick() {
   const c = S.control || {};

@@ -3,7 +3,20 @@
 // 두 어댑터는 같은 함수(ready, watch, get, set, update, push, increment, remove, serverNow, uid, onConnection, presence)를 가진다.
 import { FIREBASE_CONFIG } from '../config.js';
 
-const impl = FIREBASE_CONFIG ? await import('./store-firebase.js') : await import('./store-demo.js');
+// Firebase 값이 있어도 주소 끝에 ?demo=1을 붙이면 이 브라우저는 데모 모드로 바뀐다(?demo=0이면 원래대로). 리허설용
+// 학생 기기가 실수로 데모가 되지 않게, 이 PC에서 연 주소(localhost)에서만 동작한다
+export const canDemo = ['localhost', '127.0.0.1'].includes(location.hostname);
+const forceDemo = (() => {
+  if (!canDemo) return false;
+  try {
+    const q = new URLSearchParams(location.search).get('demo');
+    if (q === '1') localStorage.setItem('e30:demo', '1');
+    if (q === '0') localStorage.removeItem('e30:demo');
+    return localStorage.getItem('e30:demo') === '1';
+  } catch { return false; }
+})();
+
+const impl = FIREBASE_CONFIG && !forceDemo ? await import('./store-firebase.js') : await import('./store-demo.js');
 
 export const {
   isDemo, ready, teacherLogin, logout, watch, get, set, update, push, increment, remove, serverNow, uid, onConnection, presence,

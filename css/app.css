@@ -110,18 +110,6 @@ input[type="number"] { width: 90px; }
 .celebrate p { font-size: clamp(18px, 2.4vw, 32px); max-width: 34ch; margin: 0 auto 18px; }
 canvas#confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 80; }
 
-/* 훅 슬롯 (기존 도구판의 릴) */
-.reel { position: relative; height: 210px; overflow: hidden; border-radius: 12px; background: linear-gradient(#05070d, #111829 30%, #111829 70%, #05070d); border: 1px solid var(--line); }
-.reel::before, .reel::after { content: ""; position: absolute; left: 0; right: 0; height: 70px; z-index: 2; pointer-events: none; }
-.reel::before { top: 0; background: linear-gradient(#0A0E19, transparent); }
-.reel::after { bottom: 0; background: linear-gradient(transparent, #0A0E19); }
-.reel .window { position: absolute; left: 10px; right: 10px; top: 70px; height: 70px; border: 3px solid var(--cue); border-radius: 10px; z-index: 3; pointer-events: none; box-shadow: 0 0 24px rgba(255,210,63,.25); }
-.reel .strip { position: absolute; left: 0; right: 0; top: 0; will-change: transform; }
-.reel .strip div { height: 70px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 0 22px; font-weight: 900; font-size: clamp(17px, 2vw, 24px); }
-.spin { font-weight: 900; font-size: 26px; background: var(--onair); color: #fff; border: 0; border-radius: 14px; padding: 14px; box-shadow: 0 6px 0 #a3202f; }
-.spin:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #a3202f; }
-.spin small { display: block; font-size: 15px; font-weight: 700; opacity: .85; }
-
 .boot, .fatal { min-height: 100vh; display: grid; place-content: center; gap: 16px; text-align: center; padding: 24px; font-size: 20px; }
 
 /* ───────── 시작 화면 (index) ───────── */
@@ -276,6 +264,18 @@ body.tv { font-size: 2.5rem; height: 100vh; overflow: hidden; display: grid; gri
 .s-missions span { font-size: 2.6rem; padding: .3rem 1.2rem; border-radius: 1rem; background: var(--panel2); color: var(--mute); font-weight: 900; }
 .s-missions span.on { background: var(--mint); color: #062216; }
 .s-cele { color: var(--cue); font-weight: 900; font-size: 3rem; text-align: center; margin: 1rem 0 0; word-break: keep-all; }
+.s-acts { display: grid; gap: 1rem; margin-top: 1.6rem; }
+.s-acts div { font-size: 2.8rem; font-weight: 900; word-break: keep-all; }
+.s-acts b { display: inline-block; background: var(--cue); color: #1a1400; border-radius: .6rem; padding: 0 .8rem; margin-right: 1rem; font-size: 2.5rem; }
+.s-hook .act { font-size: 2.5rem; color: var(--mute); font-weight: 700; word-break: keep-all; }
+.s-sev { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 52rem), 1fr)); gap: 1.2rem; margin-top: 1.6rem; }
+.sv { display: grid; grid-template-columns: auto minmax(0, 1fr) 5rem 3rem 5rem 5rem; gap: 1rem; align-items: center; background: var(--panel); border-left: 1rem solid var(--c); border-radius: 1.4rem; padding: 1rem 1.6rem; font-size: 3rem; font-weight: 900; }
+.sv .n { font-family: var(--mono); font-size: 4.4rem; text-align: center; color: var(--mute); }
+.sv .n.now { color: var(--cue); }
+.sv .ar { color: var(--mute); text-align: center; }
+.sv .d { font-size: 2.6rem; color: var(--mint); }
+.s-gauge { display: grid; place-items: center; }
+.s-gauge > div { width: min(100%, 120rem); }
 .s-start { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(5,8,16,.92); }
 .s-start button { background: var(--cue); color: #1a1400; border: 0; border-radius: 2rem; padding: 3rem 5rem; font-weight: 900; font-size: 4rem; }
 .s-start small { display: block; font-size: 2.5rem; font-weight: 700; opacity: .8; }
@@ -365,6 +365,17 @@ body.mobile { font-size: 20px; }
 .m-reflect .cells { width: min(520px, 100%); gap: 4px; }
 .m-cele { color: var(--cue); font-weight: 900; font-size: 24px; max-width: 34ch; margin: 0; }
 .m-timer .clock { font-size: clamp(64px, 9vw, 120px); }
+.m-sev { text-align: center; justify-items: center; width: 100%; max-width: 720px; }
+.m-sev p { margin: 0; font-size: 22px; font-weight: 700; word-break: keep-all; }
+.sevs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.sev { min-height: 110px; border-radius: 20px; border: 4px solid var(--line); background: var(--panel2); font-weight: 900; font-size: 52px; }
+.sev.on { background: var(--cue); color: #1a1400; border-color: var(--cue); }
+.m-bank summary { cursor: pointer; font-weight: 700; color: var(--mute); padding: 6px 0; }
+.m-action { background: color-mix(in srgb, var(--c) 18%, var(--panel2)); border-left: 8px solid var(--c); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.m-action small { color: var(--mute); font-size: 15px; }
+.m-action b { font-size: 24px; }
+.m-action span { font-size: 16px; color: var(--mute); }
+.m-ans.col { flex-direction: column; align-items: stretch; text-align: left; }
 
 @media (max-width: 860px) {
   .m-two { grid-template-columns: minmax(0, 1fr); }
