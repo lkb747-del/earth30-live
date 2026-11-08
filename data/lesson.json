@@ -511,6 +511,19 @@
     }
   },
   "promiseCheck": "✍️ 실천 약속 카드 썼어요",
+  "video": {
+    "maxMB": 100,
+    "upload": "🎬 우리 영상 올리기 (TV 시사회용)",
+    "uploading": "⏳ 올리는 중",
+    "waiting": "🎬 올렸어요 · 선생님 확인 중",
+    "approved": "✅ 시사회 상영 준비 끝!",
+    "again": "다시 올리기",
+    "tooBig": "영상이 너무 커요. 720p로 다시 내보내 주세요",
+    "notVideo": "영상 파일(mp4)만 올릴 수 있어요",
+    "failed": "올리지 못했어요. 인터넷을 확인하고 다시 눌러 주세요",
+    "note": "Canva에서 720p로 내보낸 파일을 골라요. 가족 공유용으로 패들렛에도 올려요",
+    "tapForSound": "🔇 화면을 한 번 누르면 소리가 나요"
+  },
   "teacherNudge": {
     "everyMin": 5,
     "icon": "👀",

@@ -83,6 +83,36 @@ function sevPicker(kind) {
     <small class="muted">${esc(SEV.note)}</small></section>`;
 }
 
+/* ── 영상 올리기: 팀이 고른 파일 → 저장소 → teams/{id}/video. 교사가 승인(control/videoOk = video.at)해야 TV에서 상영 ── */
+const VID = L.video;
+let upPct = null;
+const picker = Object.assign(document.createElement('input'), { type: 'file', accept: 'video/mp4,video/*', hidden: true });
+document.body.append(picker);
+function videoButton(d, c) {
+  const v = d.video, ok = v && c.videoOk?.[me.id] === v.at;
+  const label = upPct !== null ? `${VID.uploading} ${Math.round(upPct * 100)}%` : !v ? VID.upload : `${ok ? VID.approved : VID.waiting} · ${VID.again}`;
+  return `<button class="btn vidb ${v ? (ok ? 'ok' : 'wait') : ''}" data-act="video" ${upPct !== null ? 'disabled' : ''} id="vidBtn">${esc(label)}</button>
+    <p class="muted small" style="margin:0">${esc(VID.note)}</p>`;
+}
+picker.onchange = async () => {
+  const f = picker.files[0];
+  picker.value = '';
+  if (!f) return;
+  if (!f.type.startsWith('video/')) return toast('⚠️', VID.notVideo);
+  if (f.size > VID.maxMB * 1024 * 1024) return toast('⚠️', VID.tooBig);
+  const old = my().video;
+  const ext = (f.name.split('.').pop() || 'mp4').replace(/[^a-z0-9]/gi, '').slice(0, 5) || 'mp4';
+  const path = `videos/${base.split('/')[1]}/${me.id}/${Date.now()}.${ext}`;
+  upPct = 0; lastHtml = ''; render();
+  try {
+    const url = await store.uploadFile(path, f, (p) => { upPct = p; const b = $('#vidBtn'); if (b) b.textContent = `${VID.uploading} ${Math.round(p * 100)}%`; });
+    await store.set(`${tb}/video`, { url, path, size: f.size, at: now() });
+    if (old?.path) store.removeFile(old.path);
+    sfx.win(); burst(100);
+  } catch { toast('⚠️', VID.failed); }
+  upPct = null; lastHtml = ''; render();
+};
+
 /* ── 단계별 화면 ── */
 const VIEWS = {
   intro: () => `<div class="m-two"><div class="m-hero" style="--c:${me.color}"><div class="goal">${me.goal}</div><div class="tname">${esc(me.name)}</div>
@@ -114,7 +144,7 @@ const VIEWS = {
       </section></div>`;
   },
 
-  make: () => {
+  make: (c) => {
     const d = my(), sos = d.sos && !d.sos.resolved;
     return `<div class="m-two"><section class="m-card m-timer"><h3>⏱ 제작 시간</h3><div class="clock" id="clock"></div><div class="bar"><span id="bar"></span></div>
         <div class="m-next" id="nextCue"></div>
@@ -122,6 +152,7 @@ const VIEWS = {
       </section><section class="m-card"><h3>🎬 컷 진행</h3>
         ${L.cuts.map((c) => `<button class="check ${d.progress?.[c.id] ? 'on' : ''}" data-act="cut" data-k="${c.id}">${esc(c.name)}<small>${esc(c.sec)}</small></button>`).join('')}
         <button class="check ${d.promise ? 'on' : ''}" data-act="promise">${esc(L.promiseCheck)}</button>
+        ${videoButton(d, c)}
         <button class="btn upl ${d.uploaded ? 'done' : ''}" data-act="upload" ${d.uploaded ? 'disabled' : ''}>${d.uploaded ? '✅ 시사회관 업로드 완료!' : '📤 시사회관 업로드 완료'}</button>
         <button class="btn sosb ${sos ? 'sent' : ''}" data-act="sos">${sos ? `🆘 선생님께 보냈어요 · ${esc(d.sos.q)}` : '🆘 SOS 도움 요청'}</button>
         <p class="muted small" style="margin:0">플랜 B · ${esc(L.planB)}</p>
@@ -213,6 +244,7 @@ $('#view').addEventListener('click', (e) => {
     case 'promise': store.set(`${tb}/promise`, !d.promise); if (!d.promise) sfx.pop(); break;
     case 'prep': store.set(`${tb}/prep/${b.dataset.k}`, !d.prep?.[b.dataset.k]); break;
     case 'cut': store.set(`${tb}/progress/${b.dataset.k}`, !d.progress?.[b.dataset.k]); if (!d.progress?.[b.dataset.k]) sfx.pop(); break;
+    case 'video': picker.click(); break;
     case 'upload':
       if (confirm('패들렛 시사회관에 영상을 올렸나요?')) { store.set(`${tb}/uploaded`, true); sfx.win(); burst(100); }
       break;

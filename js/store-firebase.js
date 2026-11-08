@@ -6,10 +6,11 @@
 import { FIREBASE_CONFIG } from '../config.js';
 
 const V = '10.14.1';
-const [{ initializeApp }, A, D] = await Promise.all([
+const [{ initializeApp }, A, D, ST] = await Promise.all([
   import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`),
   import(`https://www.gstatic.com/firebasejs/${V}/firebase-auth.js`),
   import(`https://www.gstatic.com/firebasejs/${V}/firebase-database.js`),
+  import(`https://www.gstatic.com/firebasejs/${V}/firebase-storage.js`),
 ]);
 
 const app = initializeApp(FIREBASE_CONFIG);
@@ -67,6 +68,21 @@ export const remove = (path, opts) => w(D.remove(r(path)), path, opts);
 
 export const serverNow = () => Date.now() + offset;
 export const uid = () => auth.currentUser?.uid || null;
+
+/* 영상 파일: Firebase Storage (videos/{code}/{teamId}/파일). 누가 올렸는지 uid를 메타데이터에 남긴다 */
+const storage = ST.getStorage(app);
+/** 올리면서 진행률(0~1)을 onProgress로 알려 주고, 끝나면 재생 주소를 돌려준다 */
+export function uploadFile(path, file, onProgress) {
+  return new Promise((ok, no) => {
+    const task = ST.uploadBytesResumable(ST.ref(storage, path), file, { contentType: file.type, customMetadata: { uid: uid() } });
+    task.on('state_changed', (s) => onProgress?.(s.bytesTransferred / s.totalBytes),
+      (e) => { report(e, path); no(e); },
+      async () => { try { ok(await ST.getDownloadURL(task.snapshot.ref)); } catch (e) { report(e, path); no(e); } });
+  });
+}
+/** 재생 주소 (Firebase는 그대로) */
+export const fileSrc = async (url) => url;
+export const removeFile = (path) => ST.deleteObject(ST.ref(storage, path)).catch((e) => console.warn(path, e));
 
 export function onConnection(cb) {
   D.onValue(r('.info/connected'), (s) => cb(!!s.val()));

@@ -1,7 +1,7 @@
 // 학교 화면(교실 TV, 보기 전용): 지금 단계를 크게 보여 준다. 아무것도 쓰지 않는다.
 import * as store from './store.js';
 import {
-  $, esc, nl2br, loadData, params, sum, mmss, timerState, nextCue, polls, premPhase, gaugeCells, gaugeV,
+  $, esc, nl2br, loadData, params, sum, mmss, timerState, nextCue, polls, premPhase, premOffset, gaugeCells, gaugeV,
   gaugeWatcher, flashCells, showAlert, connBadge, requireSession, sceneOf,
 } from './ui.js';
 import { sfx, unlockAudio } from './sfx.js';
@@ -143,6 +143,38 @@ function render() {
   tick();
 }
 
+/* 팀 영상: 교사가 승인한 영상만. 3·2·1 동안 미리 불러 두고, 상영이 시작되면 모든 TV가 같은 시각에 맞춰 튼다 */
+const vids = new Map();
+function approvedVideo(t, c) {
+  const v = S.teams?.[t.id]?.video;
+  return v && c.videoOk?.[t.id] === v.at ? v : null;
+}
+async function prepVideo(t, c) {
+  const v = approvedVideo(t, c);
+  if (!v) return null;
+  let el = vids.get(t.id);
+  if (!el || el.dataset.at !== String(v.at)) {
+    el = Object.assign(document.createElement('video'), { preload: 'auto', playsInline: true });
+    el.dataset.at = v.at;
+    vids.set(t.id, el);
+    el.src = await store.fileSrc(v.url);
+  }
+  return el;
+}
+/** 상영 시작 후 지난 초에 맞춰 재생 위치를 맞춘다. 소리가 막히면 소리 없이 틀고 '눌러 주세요' 안내 */
+function syncVideo(el, sec) {
+  if (sec < 0 || el.ended || sec >= (el.duration || Infinity)) return;
+  if (el.readyState >= 1 && Math.abs(el.currentTime - sec) > 1.2) el.currentTime = sec;
+  if (el.paused && !el.dataset.starting) {
+    el.dataset.starting = '1';
+    el.muted = false;
+    el.play().catch(() => { el.muted = true; $('#vhint')?.removeAttribute('hidden'); return el.play().catch(() => {}); })
+      .finally(() => { delete el.dataset.starting; });
+  }
+}
+const pauseVideos = () => vids.forEach((el) => { if (!el.paused) el.pause(); });
+$('#stage').addEventListener('click', () => { vids.forEach((el) => { el.muted = false; }); $('#vhint')?.setAttribute('hidden', ''); });
+
 /* 프리미어 무대 (기존 도구판의 연출을 모든 화면이 같은 startedAt으로 따라 하게 바꿈) */
 let premKey = '', lastHearts = 0;
 function tickPrem(c) {
@@ -150,7 +182,7 @@ function tickPrem(c) {
   // 무대는 시사회 장면에서만 (반응 안내 장면으로 넘기면 내려간다)
   const ph = c.stage === 'premiere' && sceneOf(L, c).live === 'premiere' ? premPhase(pr, now(), P) : null;
   const st = $('#stage');
-  if (!ph) { st.hidden = true; premKey = ''; return false; }
+  if (!ph) { st.hidden = true; premKey = ''; pauseVideos(); return false; }
   const t = T.teams.find((x) => x.id === pr.teamId);
   const done = c.premDone || {};
   const nx = ORDER.slice(ORDER.indexOf(t) + 1).find((x) => !done[x.id]) || ORDER.find((x) => !done[x.id] && x.id !== t.id);
@@ -166,7 +198,15 @@ function tickPrem(c) {
     let html = '';
     if (ph.phase === 'count') { html = `<div class="count">${ph.left}</div>`; sfx.beep(); }
     if (ph.phase === 'intro') { html = card(`<div class="phase-label">● PREMIERE</div><div class="goal">${t.goal}</div><div class="tname">${esc(t.name)}</div><div class="sub">${esc(t.school)} · ${esc(t.goalName)}</div>`); if (first) sfx.go(); }
-    if (ph.phase === 'play') html = card(`<div class="phase-label">● NOW SHOWING</div><div class="ring" id="ring"><span id="ringN"></span></div><div class="sub">${esc(t.school)} ${esc(t.name)} · 패들렛에서 재생 중</div>${react}`);
+    const video = approvedVideo(t, c);
+    if (ph.phase === 'count' || ph.phase === 'intro') prepVideo(t, c);
+    if (ph.phase !== 'play') pauseVideos();
+    if (ph.phase === 'play' && video) {
+      html = `<div class="vplay" style="--c:${t.color}"><div class="vbox" id="vbox"></div>
+        <div class="card"><div class="phase-label">● NOW SHOWING</div><div class="tname">${esc(t.name)}</div><div class="sub">${esc(t.school)} · ${esc(t.goalName)}</div>
+        <div class="ring" id="ring"><span id="ringN"></span></div>${react}<p class="vhint" id="vhint" hidden>${esc(L.video.tapForSound)}</p></div></div>`;
+      prepVideo(t, c).then((el) => { const box = $('#vbox', st); if (el && box && !box.contains(el)) box.replaceChildren(el); });
+    } else if (ph.phase === 'play') html = card(`<div class="phase-label">● NOW SHOWING</div><div class="ring" id="ring"><span id="ringN"></span></div><div class="sub">${esc(t.school)} ${esc(t.name)} · 패들렛에서 재생 중</div>${react}`);
     if (ph.phase === 'behind') html = card(`<div class="phase-label">● BEHIND</div><div class="ring" id="ring"><span id="ringN"></span></div><div class="sub">만든 사람의 한마디 · “${esc(t.action)}”</div>${react}`);
     if (ph.phase === 'done') { html = card(`<div class="tname" style="color:var(--cue)">👏 박수!</div><div class="sub">${esc(t.name)} · 💖 ${hearts}</div>${nx ? `<div class="sub">다음 상영: ${esc(nx.school)} ${esc(nx.name)}</div>` : ''}`); if (first) { sfx.fanfare(); burst(160); } }
     st.innerHTML = html;
@@ -182,6 +222,10 @@ function tickPrem(c) {
     if (hearts > lastHearts) sfx.heart();
   }
   lastHearts = hearts;
+  if (ph.phase === 'play') {
+    const el = vids.get(t.id);
+    if (el && $('#vbox', st)?.contains(el)) syncVideo(el, (now() - (pr.startedAt || 0)) / 1000 - premOffset(P, 'play'));
+  }
   return ph.phase !== 'done';
 }
 

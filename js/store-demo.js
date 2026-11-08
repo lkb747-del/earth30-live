@@ -101,6 +101,38 @@ export function uid() {
   return u;
 }
 
+/* 영상 파일: 데모는 IndexedDB(같은 PC의 탭끼리 공유)에 넣고 'demo-file:경로'로 가리킨다 */
+const idb = () => new Promise((ok, no) => {
+  const q = indexedDB.open('e30-files', 1);
+  q.onupgradeneeded = () => q.result.createObjectStore('f');
+  q.onsuccess = () => ok(q.result);
+  q.onerror = () => no(q.error);
+});
+async function files(mode, fn) {
+  const d = await idb();
+  return new Promise((ok, no) => {
+    const t = d.transaction('f', mode), req = fn(t.objectStore('f'));
+    t.oncomplete = () => ok(req.result);
+    t.onerror = () => no(t.error);
+  });
+}
+export async function uploadFile(path, file, onProgress) {
+  onProgress?.(0.5);
+  await files('readwrite', (s) => s.put(file, path));
+  onProgress?.(1);
+  return 'demo-file:' + path;
+}
+const srcs = new Map();
+export async function fileSrc(url) {
+  if (!url?.startsWith('demo-file:')) return url;
+  if (!srcs.has(url)) {
+    const blob = await files('readonly', (s) => s.get(url.slice('demo-file:'.length)));
+    srcs.set(url, blob ? URL.createObjectURL(blob) : '');
+  }
+  return srcs.get(url);
+}
+export const removeFile = (path) => files('readwrite', (s) => s.delete(path)).catch(() => {});
+
 export function onConnection(cb) {
   const f = () => cb(navigator.onLine);
   addEventListener('online', f);

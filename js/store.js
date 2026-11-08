@@ -20,6 +20,7 @@ const impl = FIREBASE_CONFIG && !forceDemo ? await import('./store-firebase.js')
 
 export const {
   isDemo, ready, teacherLogin, logout, watch, get, set, update, push, increment, remove, serverNow, uid, onConnection, presence,
+  uploadFile, fileSrc, removeFile,
 } = impl;
 
 /** 접속 중인지: Firebase는 true, 데모는 최근 15초 안의 시각 */
