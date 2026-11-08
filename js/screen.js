@@ -2,7 +2,7 @@
 import * as store from './store.js';
 import {
   $, esc, nl2br, loadData, params, sum, mmss, timerState, nextCue, polls, premPhase, gaugeCells, gaugeV,
-  gaugeWatcher, flashCells, showAlert, connBadge, requireSession,
+  gaugeWatcher, flashCells, showAlert, connBadge, requireSession, sceneOf,
 } from './ui.js';
 import { sfx, unlockAudio } from './sfx.js';
 import { burst } from './confetti.js';
@@ -37,16 +37,6 @@ const sevBoard = () => `<div class="s-sev">${ORDER.map((t) => {
 }).join('')}</div>`;
 
 const VIEWS = {
-  intro: (c) => {
-    const nSev = ORDER.filter((t) => S.teams?.[t.id]?.severity?.before).length;
-    return `<div class="s-intro"><div>
-      <div class="kicker">${esc(L.intro.feed)}</div>
-      <h2 class="s-title">${esc(L.title)}</h2>
-      <div class="s-problem"><span class="tag">배움 문제</span><br>${esc(L.problem)}</div>
-      <div class="s-acts">${L.intro.activities.map((a) => `<div><b>${esc(a.name)}</b>${esc(a.text)}</div>`).join('')}</div>
-    </div><div>${gaugeBlock(gaugeV(c, L))}<div class="s-next">🖐 ${esc(L.severity.title)} <b>${nSev}/${ORDER.length}팀</b></div></div></div>`;
-  },
-
   grammar: (c) => {
     const q = c.quiz || {};
     if (q.panel === 'formula') return `<div class="s-list"><div class="kicker">쇼츠 공식</div><ol>${L.formula.map((f) => `<li>${esc(f)}</li>`).join('')}</ol></div>`;
@@ -75,18 +65,6 @@ const VIEWS = {
     }
     const cards = p.cards.map((cd) => `<div class="qcard"><span class="qid">${esc(cd.id)}</span><p>${nl2br(cd.text)}</p></div>`).join('');
     return `<div class="s-quiz"><div class="qcards">${cards}</div><div class="qside"><div class="kicker">${esc(p.label)}</div><h2>${esc(p.q.ask)}</h2>${side}</div></div>`;
-  },
-
-  // 팀이 많은 학교(의령초 5팀)는 2열로, 재료 칩은 번호만 이름 줄 오른쪽에
-  plan: () => {
-    const many = MINE.length > 2;
-    return `<div>${many ? '' : '<div class="kicker">첫 3초 훅 · ④ 우리의 실천 · 4컷 재료</div>'}<h2 class="s-h">우리 학교 팀의 첫 3초</h2>
-    <div class="s-hooks">${MINE.map((t) => {
-      const d = S.teams?.[t.id] || {};
-      const chips = `<div class="pchips">${L.prepChecklist.map((x, i) => { const name = x.split(':')[0]; return `<span class="${d.prep?.['c' + (i + 1)] ? 'on' : ''}" title="${esc(name)}">${esc(many ? name.split(' ')[0] : name)}</span>`; }).join('')}</div>`;
-      return `<div class="s-hook" style="--c:${t.color}"><div class="who"><span class="no" style="background:${t.color}">${t.goal}</span>${esc(t.name)}${many ? chips : ''}</div>
-        <div class="h">${d.hook ? `“${esc(d.hook)}”` : '<span class="muted">훅 고르는 중…</span>'}</div>${many ? '' : `<div class="act">④ ${esc(t.action)}</div>${chips}`}</div>`;
-    }).join('')}</div></div>`;
   },
 
   make: () => `<div class="s-make"><div><div class="clock xl" id="clock"></div><div class="bar"><span id="bar"></span></div><div class="s-next" id="nextCue"></div></div>
@@ -118,14 +96,47 @@ const VIEWS = {
   },
 };
 
+/* ── 장면(슬라이드): lesson.json의 scenes. title·cards는 글만, live는 앱 기능 화면 ── */
+const card = (k) => `<div class="sc-card">${k.icon ? `<i>${esc(k.icon)}</i>` : ''}${k.head ? `<b>${esc(k.head)}</b>` : ''}${k.text ? `<span>${esc(k.text)}</span>` : ''}</div>`;
+const LIVE = {
+  severity: () => {
+    const sv = L.severity, n = ORDER.filter((t) => S.teams?.[t.id]?.severity?.before).length;
+    return `<div class="sc-cards sev" style="--n:${sv.labels.length}">${sv.labels.map((l, i) => card({ icon: String(sv.min + i), text: l })).join('')}</div>
+      <div class="s-next">🖐 모둠 평균을 누른 팀 <b>${n}/${ORDER.length}</b></div>`;
+  },
+  gauge: (c) => `${gaugeBlock(gaugeV(c, L))}<div class="sc-rules">${L.gauge.rules.map((r) => `<span>${esc(r.label)} = ${r.cells}칸</span>`).join('')}</div>`,
+  problem: () => `<h2 class="sc-big">${esc(L.problem)}</h2><div class="sc-cards" style="--n:${L.intro.activities.length}">${L.intro.activities.map((a) => card({ head: a.name, text: a.text })).join('')}</div>`,
+  storyboard: () => `<div class="sc-cards sb" style="--n:${L.cuts.length}">${L.cuts.map((ct, i) => card({ icon: ct.sec, head: ct.name, text: (L.prepChecklist[i] || '').split(':').slice(1).join(':').trim() })).join('')}</div>`,
+  // 일곱 팀이 고른 훅이 실시간으로 채워지는 표
+  hooks: () => `<div class="sc-hooks">${ORDER.map((t) => {
+    const h = S.teams?.[t.id]?.hook;
+    return `<div class="hk" style="--c:${t.color}"><span class="no" style="background:${t.color}">${t.goal}</span><b>${esc(t.name)}</b><span class="h">${h ? `“${esc(h)}”` : '<span class="muted">고르는 중…</span>'}</span><span class="a">④ ${esc(t.action)}</span></div>`;
+  }).join('')}</div>`,
+  quiz: (c) => VIEWS.grammar(c),
+  make: () => VIEWS.make(),
+  premiere: (c) => VIEWS.premiere(c),
+  reflect: (c) => VIEWS.reflect(c),
+};
+function sceneHtml(sc, c) {
+  const body = sc.kind === 'title'
+    ? `<h1 class="sc-big">${esc(sc.title)}</h1>${sc.sub ? `<p class="sc-sub">${esc(sc.sub)}</p>` : ''}${sc.teams ? `<div class="sc-teams">${ORDER.map((t) => `<span><b class="no" style="background:${t.color}">${t.goal}</b>${esc(t.school)} ${esc(t.name)}</span>`).join('')}</div>` : ''}`
+    : sc.kind === 'cards'
+      ? `<div class="sc-cards${sc.chain ? ' chain' : ''}" style="--n:${sc.cols || sc.cards.length}">${sc.cards.map(card).join(sc.chain ? '<div class="sc-arrow">→</div>' : '')}</div>`
+      : (LIVE[sc.live] || (() => ''))(c);
+  // 퀴즈·제작·시사회·정리 화면은 자기 제목이 있어서 장면 틀(theme) 없이 그대로 쓴다
+  if (sc.kind === 'live' && !sc.theme) return body;
+  const head = (sc.kicker ? `<div class="kicker">${esc(sc.kicker)}</div>` : '') + (sc.title && sc.kind !== 'title' ? `<h2 class="sc-title">${esc(sc.title)}</h2>` : '');
+  return `<div class="sc ${sc.theme || 'dark'} k-${sc.kind}">${head}${body}${sc.note ? `<p class="sc-note">${esc(sc.note)}</p>` : ''}</div>`;
+}
+
 const watchGauge = gaugeWatcher(L, (from, to) => { sfx.pop(); flashCells($('#view'), from, to); });
 
 function render() {
   const c = S.control || {};
   const st = L.stages.find((s) => s.id === c.stage) || L.stages[0];
-  const idx = L.stages.indexOf(st);
-  $('#stageName').innerHTML = `<small>${idx + 1}/${L.stages.length}</small>${esc(st.name)}`;
-  const html = (VIEWS[st.id] || VIEWS.intro)(c);
+  const sc = sceneOf(L, c);
+  $('#stageName').innerHTML = `<small>${L.scenes.indexOf(sc) + 1}/${L.scenes.length}</small>${esc(st.name)}`;
+  const html = sceneHtml(sc, c);
   if (html !== lastHtml) { $('#view').innerHTML = html; lastHtml = html; }
   watchGauge(gaugeV(c, L));
   showAlert(c.alert, now());
@@ -136,7 +147,8 @@ function render() {
 let premKey = '', lastHearts = 0;
 function tickPrem(c) {
   const pr = c.premiere || {};
-  const ph = c.stage === 'premiere' ? premPhase(pr, now(), P) : null;
+  // 무대는 시사회 장면에서만 (반응 안내 장면으로 넘기면 내려간다)
+  const ph = c.stage === 'premiere' && sceneOf(L, c).live === 'premiere' ? premPhase(pr, now(), P) : null;
   const st = $('#stage');
   if (!ph) { st.hidden = true; premKey = ''; return false; }
   const t = T.teams.find((x) => x.id === pr.teamId);
@@ -185,6 +197,10 @@ function tick() {
     const txt = nc ? `다음 알림 <b>${nc.at}분</b> ${esc(nc.icon)} ${esc(nc.msg)}` : (t.left <= 0 ? '제작 시간 끝!' : '');
     if ($('#nextCue').innerHTML !== txt) $('#nextCue').innerHTML = txt;
   }
+  // 제작 중 다른 장면을 띄워도 위쪽에 남은 시간이 보이게
+  const mini = $('#miniClock');
+  mini.hidden = !t.running || !!clock;
+  if (!mini.hidden) mini.textContent = `⏱ ${mmss(t.left)}`;
   const live = tickPrem(c);
   $('#onair').classList.toggle('live', t.running || live);
 }

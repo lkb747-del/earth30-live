@@ -72,6 +72,13 @@ export function initialControl(L) {
   };
 }
 
+/** 지금 장면: control/scene이 없거나 단계와 안 맞으면 그 단계의 첫 장면 */
+export function sceneOf(L, c) {
+  const stage = c?.stage || L.stages[0].id;
+  const s = L.scenes.find((x) => x.id === c?.scene);
+  return s && s.stage === stage ? s : L.scenes.find((x) => x.stage === stage) || L.scenes[0];
+}
+
 /** 제작 타이머: endAt(서버 시각)만 저장하고 화면마다 남은 시간을 계산 */
 export function timerState(c, now) {
   const t = { total: 0, endAt: 0, remain: 0, running: false, ...(c?.timer || {}) };

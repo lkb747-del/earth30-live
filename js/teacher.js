@@ -5,7 +5,7 @@ import { FIREBASE_CONFIG } from '../config.js';
 import {
   $, $$, esc, loadData, params, rid, sum, mmss, initialControl, timerState, cueKey, polls,
   premPhase, premOffset, PHASE_NAME, gaugeCells, gaugeV, showAlert, toast, connBadge, soundButton, teamChip,
-  fatal, errorToasts,
+  fatal, errorToasts, sceneOf,
 } from './ui.js';
 import { sfx } from './sfx.js';
 
@@ -77,19 +77,56 @@ async function newCode() {
 const ctl = () => S.control || (S.control = {});
 const stageId = () => ctl().stage || L.stages[0].id;
 function sendAlert(icon, msg) { store.set(C('alert'), { id: rid(), icon, msg, at: now() }); }
-function setStage(id) { if (id !== stageId()) store.set(C('stage'), id); }
+/* ── 장면(슬라이드): 교사가 넘기면 모든 학교 화면이 같이 넘어간다 ── */
+const SC = L.scenes;
+const scene = () => sceneOf(L, ctl());
+/** 장면으로 가기. effects=false면 퀴즈·정리 단계 같은 'on' 동작은 하지 않는다(이미 한 경우) */
+function setScene(sc, effects = true) {
+  if (!sc) return;
+  const up = { scene: sc.id, stage: sc.stage };
+  if (effects && sc.on?.quiz) up.quiz = { poll: sc.on.quiz, open: true, revealed: false, device: !!(ctl().quiz || {}).device };
+  if (effects && sc.on?.reflectStep) up.reflectStep = sc.on.reflectStep;
+  Object.assign(ctl(), up);
+  store.update(`${base}/control`, up);
+  render();
+}
+/** 단계로 가기: 그 단계의 대표 장면(main) 또는 첫 장면 */
+function setStage(id) {
+  if (id === stageId()) return;
+  setScene(SC.find((s) => s.stage === id && s.main) || SC.find((s) => s.stage === id), false);
+}
+const step = (d) => setScene(SC[SC.indexOf(scene()) + d]);
 
-/* ── 단계 ── */
 function renderStages() {
   const cur = L.stages.findIndex((s) => s.id === stageId());
   $('#chips').innerHTML = L.stages.map((s, i) => `<button class="chip ${i === cur ? 'on' : i < cur ? 'past' : ''}" data-st="${s.id}"><small>${s.from}~${s.to}분</small>${esc(s.name)}</button>`).join('');
-  $('#prev').disabled = cur <= 0;
-  $('#next').disabled = cur >= L.stages.length - 1;
+  const sc = scene(), i = SC.indexOf(sc), nx = SC[i + 1];
+  $('#prev').disabled = i <= 0;
+  $('#next').disabled = !nx;
   $$('.t-grid .panel').forEach((p) => p.classList.toggle('hot', (p.dataset.stages || '').split(' ').includes(stageId())));
+  $('#scIdx').textContent = `장면 ${i + 1}/${SC.length} · ${L.stages.find((s) => s.id === sc.stage).name}`;
+  $('#scNow').textContent = sceneName(sc);
+  $('#scNext').textContent = nx ? `다음 ▶ ${sceneName(nx)}` : '마지막 장면이에요';
+  $('#scNotes').innerHTML = esc(sc.notes || '').replace(/\n/g, '<br>');
+  $('#scList').innerHTML = SC.map((s, k) => `<button class="${s === sc ? 'on' : ''}" data-sc="${s.id}" title="${esc(sceneName(s))}">${k + 1}</button>`).join('');
 }
-$('#chips').onclick = (e) => { const b = e.target.closest('[data-st]'); if (b) setStage(b.dataset.st); };
-$('#prev').onclick = () => { const i = L.stages.findIndex((s) => s.id === stageId()); if (i > 0) setStage(L.stages[i - 1].id); };
-$('#next').onclick = () => { const i = L.stages.findIndex((s) => s.id === stageId()); if (i < L.stages.length - 1) setStage(L.stages[i + 1].id); };
+/** 장면 이름: 제목이 없는 앱 기능 장면은 퀴즈 판 이름·정리 소단계 이름으로 */
+function sceneName(s) {
+  if (s.title) return s.title;
+  if (s.on?.quiz) return POLLS.find((p) => p.id === s.on.quiz)?.label || '퀴즈';
+  if (s.on?.reflectStep) return L.reflect.steps.find((r) => r.id === s.on.reflectStep)?.label || '정리';
+  return { make: '⏱ 제작 타이머', premiere: '🎬 실시간 시사회' }[s.live] || s.kicker || s.id;
+}
+$('#chips').onclick = (e) => { const b = e.target.closest('[data-st]'); if (b) setScene(SC.find((s) => s.stage === b.dataset.st)); };
+$('#scList').onclick = (e) => { const b = e.target.closest('[data-sc]'); if (b) setScene(SC.find((s) => s.id === b.dataset.sc)); };
+$('#prev').onclick = () => step(-1);
+$('#next').onclick = () => step(1);
+// 키보드·프레젠터 리모컨(PageDown/PageUp): 입력 칸에 글을 쓰는 중이 아닐 때만
+addEventListener('keydown', (e) => {
+  if (e.target.closest('input, textarea, select') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (['ArrowRight', 'PageDown'].includes(e.key)) { e.preventDefault(); step(1); }
+  if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); step(-1); }
+});
 
 /* ── 제작 타이머 (기존 도구판의 타이머를 endAt 동기화 방식으로 바꿈) ── */
 $('#tMin').value = L.makeTimerMinutes;
@@ -166,9 +203,7 @@ function renderQuiz() {
       ${dev ? `<button class="btn sm" data-q="close" data-p="${p.id}" ${cur && q.open ? '' : 'disabled'}>마감</button>` : ''}
       <button class="btn sm cue" data-q="reveal" data-p="${p.id}" ${canReveal ? '' : 'disabled'}>${dev ? '결과 공개' : '정리하기'}</button></div></div>`;
   }).join('');
-  $('#quizPanels').innerHTML = [['formula', '🧪 쇼츠 공식 보여 주기'], ['promises', '🤝 크리에이터 약속 보여 주기']]
-    .map(([k, label]) => `<button class="btn ${q.panel === k ? 'cue' : ''}" data-panel="${k}">${label}</button>`).join('')
-    + `<button class="btn sm ${dev ? 'go' : ''}" id="qDevice">📱 팀 기기 투표 ${dev ? '켜짐' : '꺼짐 (손 투표)'}</button>`;
+  $('#quizPanels').innerHTML = `<button class="btn sm ${dev ? 'go' : ''}" id="qDevice">📱 팀 기기 투표 ${dev ? '켜짐' : '꺼짐 (손 투표)'}</button>`;
 }
 $('#quizPanels').addEventListener('click', (e) => {
   if (e.target.closest('#qDevice')) store.update(C('quiz'), { device: !(ctl().quiz || {}).device, open: false, revealed: false });
@@ -177,16 +212,9 @@ $('#quiz').onclick = (e) => {
   const b = e.target.closest('[data-q]');
   if (!b) return;
   const p = b.dataset.p;
-  if (b.dataset.q === 'open') { store.set(C('quiz'), { poll: p, open: true, revealed: false, device: !!(ctl().quiz || {}).device }); setStage('grammar'); sfx.go(); }
+  if (b.dataset.q === 'open') { setScene(SC.find((s) => s.on?.quiz === p)); sfx.go(); }
   if (b.dataset.q === 'close') store.update(C('quiz'), { open: false });
   if (b.dataset.q === 'reveal') store.update(C('quiz'), { open: false, revealed: true });
-};
-$('#quizPanels').onclick = (e) => {
-  const b = e.target.closest('[data-panel]');
-  if (!b) return;
-  const q = ctl().quiz || {};
-  store.update(C('quiz'), { panel: q.panel === b.dataset.panel ? null : b.dataset.panel, open: false });
-  setStage('grammar');
 };
 
 /* ── 배움 정리 소단계 ── */
@@ -200,8 +228,7 @@ function renderReflect() {
 $('#rSteps').onclick = (e) => {
   const b = e.target.closest('[data-rs]');
   if (!b) return;
-  store.set(C('reflectStep'), b.dataset.rs);
-  setStage('reflect');
+  setScene(SC.find((s) => s.on?.reflectStep === b.dataset.rs));
 };
 
 /* ── 프리미어 (기존 도구판의 프리미어 연출: 3·2·1 → 팀 소개 → 30초 링 → 비하인드) ── */
@@ -213,7 +240,8 @@ function nextTeam(afterId) {
 }
 function startPrem(id, phase = 'count') {
   store.set(C('premiere'), { teamId: id, startedAt: now() - premOffset(P, phase) * 1000 });
-  setStage('premiere');
+  // 반응 안내 장면에 있었어도 무대가 보이는 시사회 장면으로
+  if (scene().live !== 'premiere') setScene(SC.find((s) => s.live === 'premiere'), false);
 }
 function renderPrem() {
   const pr = prem(), done = ctl().premDone || {};
