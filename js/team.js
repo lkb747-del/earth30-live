@@ -106,7 +106,8 @@ picker.onchange = async () => {
   upPct = 0; lastHtml = ''; render();
   try {
     const url = await store.uploadFile(path, f, (p) => { upPct = p; const b = $('#vidBtn'); if (b) b.textContent = `${VID.uploading} ${Math.round(p * 100)}%`; });
-    await store.set(`${tb}/video`, { url, path, size: f.size, at: now() });
+    // 기록이 막히면(데이터베이스 규칙) 방금 올린 파일은 지우고 실패로 알린다
+    if (!(await store.set(`${tb}/video`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);
     sfx.win(); burst(100);
   } catch { toast('⚠️', VID.failed); }
