@@ -48,12 +48,15 @@ function showJoin() {
     // 데모는 여기서 PIN을 비교하고, Firebase는 보안 규칙이 PIN이 다르면 members 쓰기를 막는다.
     if (store.isDemo && String(await store.get(`pins/${c}/${pick}`)) !== pin) return wrong();
     if (!(await store.set(`members/${c}/${pick}/${store.uid()}`, pin, { quiet: true }))) return wrong();
-    sessionStorage.setItem('e30:team', JSON.stringify({ code: c, team: pick }));
+    sessionStorage.setItem('e30:team', JSON.stringify({ code: c, team: pick, pin }));
     localStorage.setItem('e30:lastCode', c);
     $('#join').hidden = true;
     history.replaceState(null, '', `team.html?code=${c}`);
     start(c, pick);
   };
+  // 교사 화면의 팀 링크·카드 QR에는 PIN이 들어 있어 누르면 바로 들어간다 (틀리면 입력 칸에 남음)
+  const pin0 = params.get('pin');
+  if (pin0 && /^\d{4}$/.test(pin0) && $('#jCode').value && pick) { $('#jPin').value = pin0; $('#join').requestSubmit(); }
 }
 
 function start(code, teamId) {
@@ -226,9 +229,10 @@ function renderSheet() {
     ${d.sos && !d.sos.resolved ? '<button class="btn" data-sos="cancel">보낸 SOS 취소</button>' : ''}
     <button class="btn" data-sos="close">닫기</button></div>`;
 }
-/** 휴대폰 올리기 QR: 이 팀의 세션 코드·팀이 담긴 upload.html 주소 (PIN은 담지 않음) */
+/** 휴대폰 올리기 QR: 이 팀의 세션 코드·팀·PIN이 담긴 upload.html 주소 (찍으면 바로 들어감) */
 async function openQr() {
-  const url = pageUrl('upload.html', { code: base.split('/')[1], team: me.id });
+  const pin = (() => { try { return JSON.parse(sessionStorage.getItem('e30:team'))?.pin || ''; } catch { return ''; } })();
+  const url = pageUrl('upload.html', { code: base.split('/')[1], team: me.id, ...(pin ? { pin } : {}) });
   let svg;
   try { svg = await qrSvg(url); } catch { svg = '<p>QR을 만들지 못했어요. 아래 주소를 휴대폰에 입력해요</p>'; }
   qrHtml = `<div class="m-card"><h3>${esc(VID.phone.qrTitle)}</h3><div class="qr-box">${svg}</div>

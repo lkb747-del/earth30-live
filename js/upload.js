@@ -53,6 +53,9 @@ function showJoin() {
     history.replaceState(null, '', `upload.html?code=${c}&team=${pick}`);
     start(c, pick);
   };
+  // 교사 화면의 팀 링크·카드 QR에는 PIN이 들어 있어 누르면 바로 들어간다 (틀리면 입력 칸에 남음)
+  const pin0 = params.get('pin');
+  if (pin0 && /^\d{4}$/.test(pin0) && $('#jCode').value && pick) { $('#jPin').value = pin0; $('#join').requestSubmit(); }
 }
 
 function start(code, teamId) {

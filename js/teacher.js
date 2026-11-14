@@ -393,7 +393,9 @@ async function openPreview(id) {
 function renderPins() {
   $('#pins').innerHTML = TEAMS.map((t) => {
     const n = Object.keys(MEMBERS[t.id] || {}).length;
-    return `<tr><td>${esc(t.school)} ${esc(t.name)}</td><td class="muted">${n ? `기기 ${n}대 등록` : ''}</td><td>${esc(PINS[t.id] || '')}</td></tr>`;
+    const link = PINS[t.id] ? pageUrl('team.html', { code, team: t.id, pin: PINS[t.id] }) : '';
+    return `<tr><td>${esc(t.school)} ${esc(t.name)}</td><td class="muted">${n ? `기기 ${n}대 등록` : ''}</td><td>${esc(PINS[t.id] || '')}</td>
+      <td>${link ? `<a class="btn sm" target="_blank" rel="noopener" href="${esc(link)}">📱 바로 열기</a> <button class="btn sm" data-copy="${esc(link)}">🔗 링크 복사</button>` : ''}</td></tr>`;
   }).join('');
   const regs = Object.values(MEMBERS).reduce((a, o) => a + Object.keys(o || {}).length, 0);
   $('#members').textContent = `팀 기기 ${regs}대 등록`;
@@ -402,6 +404,12 @@ $('#links').innerHTML = T.schools.map((s) => `<a class="btn sm" target="_blank" 
   + `<a class="btn sm" target="_blank" rel="noopener" href="team.html?code=${code}">📱 팀 화면 열기</a>`
   + `<button class="btn sm cue" id="printCards">${esc(L.video.phone.card.print)}</button>`
   + (store.isDemo ? (FIREBASE_CONFIG ? '<a class="btn sm cue" href="index.html?demo=0">🔥 실시간 모드로 바꾸기 (보안 점검은 실시간 모드에서)</a>' : '') : `<a class="btn sm" target="_blank" rel="noopener" href="rules-check.html?code=${code}">🛡 보안 점검</a><button class="btn sm" id="logout">로그아웃 (${esc(email)})</button>`);
+// 팀 바로 들어가기 링크 복사: 원격 학교 선생님께 웨일클래스로 보내거나 팀 아이북 즐겨찾기에 넣는다
+$('#pins').onclick = async (e) => {
+  const b = e.target.closest('[data-copy]');
+  if (!b) return;
+  try { await navigator.clipboard.writeText(b.dataset.copy); toast('🔗', '팀 바로 들어가기 링크를 복사했어요 (PIN이 들어 있어요)'); } catch { prompt('이 링크를 복사해요', b.dataset.copy); }
+};
 /* ── 모둠 카드 인쇄: 팀마다 업로드 QR(세션 코드·팀) + 팀 PIN. A4 한 장에 2팀, 점선으로 자르기 ── */
 $('#printCards').onclick = async () => {
   const win = window.open('', '_blank');
@@ -409,7 +417,7 @@ $('#printCards').onclick = async () => {
   win.document.write('<p style="font:20px sans-serif">카드를 만드는 중…</p>');
   const K = L.video.phone.card;
   const cards = await Promise.all(TEAMS.map(async (t) => {
-    const url = pageUrl('upload.html', { code, team: t.id });
+    const url = pageUrl('upload.html', { code, team: t.id, pin: PINS[t.id] || '' });
     const svg = await qrSvg(url).catch(() => '');
     return `<section class="card" style="--c:${t.color}">
       <header><span class="no">${t.goal}</span><div><b>${esc(t.school)} ${esc(t.name)}</b><small>${esc(t.goalName)}</small></div><h1>${esc(K.title)}</h1></header>
