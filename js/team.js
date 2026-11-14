@@ -114,6 +114,7 @@ picker.onchange = async () => {
     // 기록이 막히면(데이터베이스 규칙) 방금 올린 파일은 지우고 실패로 알린다
     if (!(await store.set(`${tb}/video`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);
+    store.set(`${tb}/uploaded`, true);
     sfx.win(); burst(100);
   } catch { toast('⚠️', VID.failed); }
   upPct = null; lastHtml = ''; render();
@@ -159,7 +160,7 @@ const VIEWS = {
         ${L.cuts.map((c) => `<button class="check ${d.progress?.[c.id] ? 'on' : ''}" data-act="cut" data-k="${c.id}">${esc(c.name)}<small>${esc(c.sec)}</small></button>`).join('')}
         <button class="check ${d.promise ? 'on' : ''}" data-act="promise">${esc(L.promiseCheck)}</button>
         ${videoButton(d, c)}
-        <button class="btn upl ${d.uploaded ? 'done' : ''}" data-act="upload" ${d.uploaded ? 'disabled' : ''}>${d.uploaded ? '✅ 시사회관 업로드 완료!' : '📤 시사회관 업로드 완료'}</button>
+        <button class="btn upl ${d.uploaded ? 'done' : ''}" data-act="upload" ${d.uploaded ? 'disabled' : ''}>${d.uploaded ? '✅ 업로드 완료!' : '📤 다른 곳(패들렛)에 올렸어요'}</button>
         <button class="btn sosb ${sos ? 'sent' : ''}" data-act="sos">${sos ? `🆘 선생님께 보냈어요 · ${esc(d.sos.q)}` : '🆘 SOS 도움 요청'}</button>
         <p class="muted small" style="margin:0">플랜 B · ${esc(L.planB)}</p>
       </section></div>`;
@@ -274,7 +275,7 @@ $('#view').addEventListener('click', (e) => {
     case 'video': picker.click(); break;
     case 'qr': openQr(); break;
     case 'upload':
-      if (confirm('패들렛 시사회관에 영상을 올렸나요?')) { store.set(`${tb}/uploaded`, true); sfx.win(); burst(100); }
+      if (confirm('앱 업로드가 안 돼서 패들렛 등 다른 곳에 영상을 올렸나요?')) { store.set(`${tb}/uploaded`, true); sfx.win(); burst(100); }
       break;
     case 'sos': sosOpen = true; renderSheet(); break;
     case 'heart': {

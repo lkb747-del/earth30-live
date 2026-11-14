@@ -98,6 +98,7 @@ async function send(f) {
     });
     if (!(await store.set(`${tb}/video`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);
+    store.set(`${tb}/uploaded`, true);
     sfx.win(); burst(100); toast('🎬', PH.done);
   } catch { toast('⚠️', VID.failed); }
   upPct = null; render();

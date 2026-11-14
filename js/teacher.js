@@ -375,7 +375,7 @@ async function openPreview(id) {
   const sh = $('#vSheet');
   sh.innerHTML = `<div class="m-card"><h3>🎬 ${esc(t.school)} ${esc(t.name)} 영상</h3>
     <video controls playsinline src="${esc(await store.fileSrc(v.url))}"></video>
-    <p class="muted small" style="margin:0">얼굴·이름·학교 이름이 나오지 않는지, 숫자 출처가 있는지 확인해요</p>
+    <p class="muted small" style="margin:0">이름·학교 이름이 나오지 않는지, 얼굴이 나온 친구가 동의했는지, 숫자 출처가 있는지 확인해요</p>
     <div class="row">${videoOk(id) ? `<button class="btn" data-v="no">승인 취소</button>` : `<button class="btn go" data-v="ok">✅ 승인 (TV 시사회에서 상영)</button>`}<button class="btn" data-v="close">닫기</button></div></div>`;
   sh.hidden = false;
   sh.onclick = (e) => {
