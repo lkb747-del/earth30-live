@@ -8,6 +8,7 @@ import {
   fatal, errorToasts, sceneOf, sceneLabel,
 } from './ui.js';
 import { sfx } from './sfx.js';
+import { qrSvg, pageUrl } from './qr.js';
 
 const { T, L } = await loadData();
 const TEAMS = T.premiereOrder.map((id) => T.teams.find((t) => t.id === id));
@@ -399,7 +400,48 @@ function renderPins() {
 }
 $('#links').innerHTML = T.schools.map((s) => `<a class="btn sm" target="_blank" rel="noopener" href="screen.html?code=${code}&school=${s.id}">📺 ${esc(s.name)} 화면 열기</a>`).join('')
   + `<a class="btn sm" target="_blank" rel="noopener" href="team.html?code=${code}">📱 팀 화면 열기</a>`
+  + `<button class="btn sm cue" id="printCards">${esc(L.video.phone.card.print)}</button>`
   + (store.isDemo ? (FIREBASE_CONFIG ? '<a class="btn sm cue" href="index.html?demo=0">🔥 실시간 모드로 바꾸기 (보안 점검은 실시간 모드에서)</a>' : '') : `<a class="btn sm" target="_blank" rel="noopener" href="rules-check.html?code=${code}">🛡 보안 점검</a><button class="btn sm" id="logout">로그아웃 (${esc(email)})</button>`);
+/* ── 모둠 카드 인쇄: 팀마다 업로드 QR(세션 코드·팀) + 팀 PIN. A4 한 장에 2팀, 점선으로 자르기 ── */
+$('#printCards').onclick = async () => {
+  const win = window.open('', '_blank');
+  if (!win) return toast('⚠️', '팝업이 막혔어요. 주소창 오른쪽에서 팝업을 허용해 주세요');
+  win.document.write('<p style="font:20px sans-serif">카드를 만드는 중…</p>');
+  const K = L.video.phone.card;
+  const cards = await Promise.all(TEAMS.map(async (t) => {
+    const url = pageUrl('upload.html', { code, team: t.id });
+    const svg = await qrSvg(url).catch(() => '');
+    return `<section class="card" style="--c:${t.color}">
+      <header><span class="no">${t.goal}</span><div><b>${esc(t.school)} ${esc(t.name)}</b><small>${esc(t.goalName)}</small></div><h1>${esc(K.title)}</h1></header>
+      <div class="body"><div class="qr">${svg}</div>
+        <div class="info"><div class="pin"><small>${esc(K.pinLabel)}</small><b>${esc(PINS[t.id] || '____')}</b></div>
+          <div class="code"><small>${esc(K.codeLabel)}</small><b>${esc(code)}</b></div>
+          <ol>${K.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+          <p class="tip">${esc(K.teamLabel)}</p></div></div>
+      <footer>⚠️ ${esc(K.warn)}<span class="url">${esc(url)}</span></footer></section>`;
+  }));
+  win.document.open();
+  win.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>모둠 카드 · ${esc(code)}</title><style>
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; } body { margin: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #111; }
+    .card { height: 136mm; border: 2px dashed #999; border-radius: 6mm; padding: 7mm 9mm; margin-bottom: 5mm; display: flex; flex-direction: column; gap: 4mm; break-inside: avoid; }
+    .card:nth-of-type(2n) { break-after: page; }
+    header { display: flex; align-items: center; gap: 4mm; border-bottom: 3px solid var(--c); padding-bottom: 3mm; }
+    .no { background: var(--c); color: #fff; font-weight: 900; font-size: 22pt; width: 15mm; height: 15mm; border-radius: 3mm; display: grid; place-items: center; }
+    header b { font-size: 17pt; display: block; } header small { color: #666; font-size: 10pt; }
+    header h1 { margin: 0 0 0 auto; font-size: 13pt; color: #444; }
+    .body { display: flex; gap: 8mm; flex: 1; align-items: center; }
+    .qr { width: 72mm; flex: none; } .qr svg { width: 100%; height: auto; display: block; }
+    .info { flex: 1; display: grid; gap: 3mm; }
+    .pin, .code { border: 2px solid var(--c); border-radius: 3mm; padding: 2mm 4mm; display: flex; align-items: baseline; gap: 4mm; }
+    .pin small, .code small { font-size: 11pt; color: #555; width: 22mm; }
+    .pin b { font-size: 30pt; letter-spacing: 4pt; font-family: Consolas, monospace; } .code b { font-size: 18pt; letter-spacing: 3pt; font-family: Consolas, monospace; }
+    ol { margin: 0; padding-left: 6mm; font-size: 11.5pt; line-height: 1.5; } .tip { margin: 0; font-size: 9.5pt; color: #666; }
+    footer { font-size: 9.5pt; color: #a33; display: flex; justify-content: space-between; gap: 4mm; } .url { color: #888; font-family: Consolas, monospace; font-size: 8pt; word-break: break-all; text-align: right; }
+    .bar { position: sticky; top: 0; background: #fffbe6; padding: 8px; text-align: center; font-size: 14px; } @media print { .bar { display: none; } }
+  </style></head><body><div class="bar">세션 코드 <b>${esc(code)}</b> · ${TEAMS.length}팀 · <button onclick="print()">🖨 인쇄</button> (이 세션을 당일에도 「이 코드로 이어서 하기」로 써야 카드가 맞아요)</div>${cards.join('')}</body></html>`);
+  win.document.close();
+};
 $('#logout')?.addEventListener('click', async () => { await store.logout(); location.href = 'index.html'; });
 /* ── 참관: 주소 안내, 익명 메모를 장면별로 모아 보기 ── */
 const obsUrl = new URL(`observer.html?code=${code}`, location.href).href;
