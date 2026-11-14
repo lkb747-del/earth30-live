@@ -14,7 +14,7 @@ const base = `sessions/${code}`;
 const P = L.premiere, POLLS = polls(L), now = store.serverNow;
 const ORDER = T.premiereOrder.map((id) => T.teams.find((t) => t.id === id));
 const MINE = T.teams.filter((t) => t.schoolId === school.id);
-let S = {}, lastHtml = '';
+let S = {}, lastHtml = '', CLAPS = {};
 
 $('#schoolName').textContent = school.name;
 document.title = `${school.name} 화면 · ${L.title}`;
@@ -194,7 +194,7 @@ function tickPrem(c) {
     premKey = key;
     lastHearts = hearts;
     const card = (inner) => `<div class="card" style="--c:${t.color}">${inner}</div>`;
-    const react = `<div class="react"><span>💖 <b data-r="hearts">${hearts}</b></span>${P.feedback.map((f) => `<span>${esc(f.label.split(' ')[0])} <b data-r="${f.id}">${fb[f.id]}</b></span>`).join('')}</div>`;
+    const react = `<div class="react"><span>💖 <b data-r="hearts">${hearts}</b></span>${P.feedback.map((f) => `<span>${esc(f.label.split(' ')[0])} <b data-r="${f.id}">${fb[f.id]}</b></span>`).join('')}${L.observer.clapOnTV ? `<span>👏 <b data-r="claps">${sum(CLAPS[t.id])}</b></span>` : ''}</div>`;
     let html = '';
     if (ph.phase === 'count') { html = `<div class="count">${ph.left}</div>`; sfx.beep(); }
     if (ph.phase === 'intro') { html = card(`<div class="phase-label">● PREMIERE</div><div class="goal">${t.goal}</div><div class="tname">${esc(t.name)}</div><div class="sub">${esc(t.school)} · ${esc(t.goalName)}</div>`); if (first) sfx.go(); }
@@ -218,6 +218,7 @@ function tickPrem(c) {
     const n = $('#ringN', st);
     if (n.textContent !== String(ph.left)) { n.textContent = ph.left; if (ph.left <= 3) sfx.tick(); }
     $('[data-r="hearts"]', st).textContent = hearts;
+    $('[data-r="claps"]', st)?.replaceChildren(String(sum(CLAPS[t.id])));
     P.feedback.forEach((f) => { $(`[data-r="${f.id}"]`, st).textContent = fb[f.id]; });
     if (hearts > lastHearts) sfx.heart();
   }
@@ -250,4 +251,6 @@ function tick() {
 }
 
 store.watch(base, (v) => { S = v || {}; render(); });
+// 참관석 박수 (lesson.json observer.clapOnTV가 true일 때 시사회 무대에 표시)
+store.watch(`observers/${code}/claps`, (v) => { CLAPS = v || {}; });
 setInterval(tick, 250);

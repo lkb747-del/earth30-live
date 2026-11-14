@@ -60,8 +60,7 @@ export const set = (path, v, opts) => w(D.set(r(path), v ?? null), path, opts);
 export const update = (path, obj, opts) => w(D.update(r(path), obj), path, opts);
 export async function push(path, v, opts) {
   const ref = D.push(r(path));
-  await w(D.set(ref, v), path, opts);
-  return ref.key;
+  return (await w(D.set(ref, v), path, opts)) ? ref.key : null;
 }
 export const increment = (path, n = 1, opts) => w(D.set(r(path), D.increment(n)), path, opts);
 export const remove = (path, opts) => w(D.remove(r(path)), path, opts);

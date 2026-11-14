@@ -6,12 +6,13 @@ import {
 } from './ui.js';
 import { sfx, unlockAudio } from './sfx.js';
 import { burst } from './confetti.js';
+import { qrSvg, pageUrl } from './qr.js';
 
 const { T, L } = await loadData();
 const P = L.premiere, POLLS = polls(L), now = store.serverNow;
 const ORDER = T.premiereOrder.map((id) => T.teams.find((t) => t.id === id));
 const SEV = L.severity, H = L.hookPick;
-let me, base, tb, S = {}, lastHtml = '', sosOpen = false;
+let me, base, tb, S = {}, lastHtml = '', sosOpen = false, qrOpen = false, qrHtml = '';
 const received = [];
 
 $('#title').textContent = L.title;
@@ -92,6 +93,7 @@ function videoButton(d, c) {
   const v = d.video, ok = v && c.videoOk?.[me.id] === v.at;
   const label = upPct !== null ? `${VID.uploading} ${Math.round(upPct * 100)}%` : !v ? VID.upload : `${ok ? VID.approved : VID.waiting} · ${VID.again}`;
   return `<button class="btn vidb ${v ? (ok ? 'ok' : 'wait') : ''}" data-act="video" ${upPct !== null ? 'disabled' : ''} id="vidBtn">${esc(label)}</button>
+    <button class="btn qrb" data-act="qr">${esc(VID.phone.button)}</button>
     <p class="muted small" style="margin:0">${esc(VID.note)}</p>`;
 }
 picker.onchange = async () => {
@@ -210,6 +212,11 @@ function render() {
 }
 
 function renderSheet() {
+  if (qrOpen) {
+    $('#sheet').hidden = false;
+    $('#sheet').innerHTML = qrHtml;
+    return;
+  }
   const show = sosOpen && (S.control?.stage === 'make');
   $('#sheet').hidden = !show;
   if (!show) return;
@@ -219,7 +226,22 @@ function renderSheet() {
     ${d.sos && !d.sos.resolved ? '<button class="btn" data-sos="cancel">보낸 SOS 취소</button>' : ''}
     <button class="btn" data-sos="close">닫기</button></div>`;
 }
+/** 휴대폰 올리기 QR: 이 팀의 세션 코드·팀이 담긴 upload.html 주소 (PIN은 담지 않음) */
+async function openQr() {
+  const url = pageUrl('upload.html', { code: base.split('/')[1], team: me.id });
+  let svg;
+  try { svg = await qrSvg(url); } catch { svg = '<p>QR을 만들지 못했어요. 아래 주소를 휴대폰에 입력해요</p>'; }
+  qrHtml = `<div class="m-card"><h3>${esc(VID.phone.qrTitle)}</h3><div class="qr-box">${svg}</div>
+    <p style="margin:0;text-align:center">${esc(VID.phone.qrHow)}</p><p class="qr-url">${esc(url)}</p>
+    <button class="btn" data-qr="close">닫기</button></div>`;
+  qrOpen = true;
+  renderSheet();
+}
 $('#sheet').onclick = (e) => {
+  if (qrOpen) {
+    if (e.target.closest('[data-qr]') || e.target === $('#sheet')) { qrOpen = false; renderSheet(); }
+    return;
+  }
   const b = e.target.closest('[data-sos]');
   if (!b && e.target !== $('#sheet')) return;
   const k = b?.dataset.sos ?? 'close';
@@ -246,6 +268,7 @@ $('#view').addEventListener('click', (e) => {
     case 'prep': store.set(`${tb}/prep/${b.dataset.k}`, !d.prep?.[b.dataset.k]); break;
     case 'cut': store.set(`${tb}/progress/${b.dataset.k}`, !d.progress?.[b.dataset.k]); if (!d.progress?.[b.dataset.k]) sfx.pop(); break;
     case 'video': picker.click(); break;
+    case 'qr': openQr(); break;
     case 'upload':
       if (confirm('패들렛 시사회관에 영상을 올렸나요?')) { store.set(`${tb}/uploaded`, true); sfx.win(); burst(100); }
       break;

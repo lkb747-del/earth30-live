@@ -5,7 +5,7 @@ import { FIREBASE_CONFIG } from '../config.js';
 import {
   $, $$, esc, loadData, params, rid, sum, mmss, initialControl, timerState, cueKey, polls,
   premPhase, premOffset, PHASE_NAME, gaugeCells, gaugeV, showAlert, toast, connBadge, soundButton, teamChip,
-  fatal, errorToasts, sceneOf,
+  fatal, errorToasts, sceneOf, sceneLabel,
 } from './ui.js';
 import { sfx } from './sfx.js';
 
@@ -110,13 +110,7 @@ function renderStages() {
   $('#scNotes').innerHTML = esc(sc.notes || '').replace(/\n/g, '<br>');
   $('#scList').innerHTML = SC.map((s, k) => `<button class="${s === sc ? 'on' : ''}" data-sc="${s.id}" title="${esc(sceneName(s))}">${k + 1}</button>`).join('');
 }
-/** 장면 이름: 제목이 없는 앱 기능 장면은 퀴즈 판 이름·정리 소단계 이름으로 */
-function sceneName(s) {
-  if (s.title) return s.title;
-  if (s.on?.quiz) return POLLS.find((p) => p.id === s.on.quiz)?.label || '퀴즈';
-  if (s.on?.reflectStep) return L.reflect.steps.find((r) => r.id === s.on.reflectStep)?.label || '정리';
-  return { make: '⏱ 제작 타이머', premiere: '🎬 실시간 시사회' }[s.live] || s.kicker || s.id;
-}
+const sceneName = (s) => sceneLabel(L, s);
 $('#chips').onclick = (e) => { const b = e.target.closest('[data-st]'); if (b) setScene(SC.find((s) => s.stage === b.dataset.st)); };
 $('#scList').onclick = (e) => { const b = e.target.closest('[data-sc]'); if (b) setScene(SC.find((s) => s.id === b.dataset.sc)); };
 $('#prev').onclick = () => step(-1);
@@ -407,8 +401,32 @@ $('#links').innerHTML = T.schools.map((s) => `<a class="btn sm" target="_blank" 
   + `<a class="btn sm" target="_blank" rel="noopener" href="team.html?code=${code}">📱 팀 화면 열기</a>`
   + (store.isDemo ? (FIREBASE_CONFIG ? '<a class="btn sm cue" href="index.html?demo=0">🔥 실시간 모드로 바꾸기 (보안 점검은 실시간 모드에서)</a>' : '') : `<a class="btn sm" target="_blank" rel="noopener" href="rules-check.html?code=${code}">🛡 보안 점검</a><button class="btn sm" id="logout">로그아웃 (${esc(email)})</button>`);
 $('#logout')?.addEventListener('click', async () => { await store.logout(); location.href = 'index.html'; });
+/* ── 참관: 주소 안내, 익명 메모를 장면별로 모아 보기 ── */
+const obsUrl = new URL(`observer.html?code=${code}`, location.href).href;
+$('#obsLink').value = obsUrl;
+$('#obsOpen').href = obsUrl;
+$('#obsCopy').onclick = async () => { try { await navigator.clipboard.writeText(obsUrl); toast('📋', '참관 주소를 복사했어요'); } catch { $('#obsLink').select(); } };
+let NOTES = {};
+function renderObs() {
+  const ns = Object.values(NOTES);
+  $('#obsSum').textContent = `참관 메모 ${ns.length}개`;
+}
+$('#obsNotes').onclick = () => {
+  const ns = Object.values(NOTES).sort((a, b) => a.at - b.at);
+  const sh = $('#vSheet');
+  const groups = SC.map((s) => [s, ns.filter((n) => n.scene === s.id)]).filter(([, g]) => g.length);
+  const tags = Object.entries(ns.reduce((a, n) => ({ ...a, [n.tag]: (a[n.tag] || 0) + 1 }), {})).sort((a, b) => b[1] - a[1]);
+  sh.innerHTML = `<div class="m-card o-notesheet"><h3>📝 장면별 참관 메모 (${ns.length}개, 익명)</h3>
+    <div class="row">${tags.map(([t, k]) => `<span class="chip on">${esc(t)} ${k}</span>`).join('') || '<span class="muted">아직 메모가 없어요</span>'}</div>
+    <div class="o-groups">${groups.map(([s, g]) => `<div><b>${SC.indexOf(s) + 1}. ${esc(sceneName(s))}</b><ul>${g.map((n) => `<li>${esc(n.tag)}${n.text ? ` · ${esc(n.text)}` : ''} <small class="muted">${new Date(n.at).toTimeString().slice(0, 5)}</small></li>`).join('')}</ul></div>`).join('')}</div>
+    <div class="row"><button class="btn" data-v="close">닫기</button></div></div>`;
+  sh.hidden = false;
+  sh.onclick = (e) => { if (e.target.closest('[data-v="close"]') || e.target === sh) { sh.hidden = true; sh.innerHTML = ''; } };
+};
+store.watch(`observers/${code}/notes`, (v) => { NOTES = v || {}; renderObs(); });
+
 $('#export').onclick = async () => {
-  const data = { exportedAt: new Date().toISOString(), code, lesson: L.title, session: await store.get(base) };
+  const data = { exportedAt: new Date().toISOString(), code, lesson: L.title, session: await store.get(base), observerNotes: Object.values(NOTES).map(({ uid, ...n }) => n) };
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
   a.download = `30초지구_수업기록_${code}_${new Date().toISOString().slice(0, 10)}.json`;
@@ -417,13 +435,14 @@ $('#export').onclick = async () => {
 };
 $('#newSess').onclick = () => { if (confirm('새 세션 코드를 만들까요? 학교 화면·팀 기기도 새 코드로 다시 들어와야 해요.')) location.href = 'teacher.html?new=1'; };
 $('#reset').onclick = async () => {
-  if (!confirm('정말 전체 초기화할까요? 단계·타이머·게이지·투표·하트·팀 기록과 올린 영상이 모두 지워져요.')) return;
+  if (!confirm('정말 전체 초기화할까요? 단계·타이머·게이지·투표·하트·팀 기록, 올린 영상, 참관 메모가 모두 지워져요. (참관 메모를 남기려면 먼저 수업 기록 내보내기)')) return;
   if (!confirm('한 번 더 확인할게요. 되돌릴 수 없어요. 초기화할까요?')) return;
   firedLocal = new Set();
   // 학생 영상은 수업이 끝나면 저장소에서도 지운다
   await Promise.all(TEAMS.map((t) => S.teams?.[t.id]?.video?.path).filter(Boolean).map((p) => store.removeFile(p)));
   await store.set(base, { teacherUid: store.uid(), createdAt: now(), control: initialControl(L) });
   await store.remove(`members/${code}`);
+  await store.remove(`observers/${code}`);
   toast('🧹', '초기화했어요. 팀 기기는 PIN으로 다시 들어와요.');
 };
 

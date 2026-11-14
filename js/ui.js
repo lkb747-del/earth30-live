@@ -79,6 +79,14 @@ export function sceneOf(L, c) {
   return s && s.stage === stage ? s : L.scenes.find((x) => x.stage === stage) || L.scenes[0];
 }
 
+/** 장면 이름: 제목이 없는 앱 기능 장면은 퀴즈 판 이름·정리 소단계 이름으로 */
+export function sceneLabel(L, s) {
+  if (s.title) return s.title;
+  if (s.on?.quiz) return polls(L).find((p) => p.id === s.on.quiz)?.label || '퀴즈';
+  if (s.on?.reflectStep) return L.reflect.steps.find((r) => r.id === s.on.reflectStep)?.label || '정리';
+  return { make: '⏱ 제작 타이머', premiere: '🎬 실시간 시사회' }[s.live] || s.kicker || s.id;
+}
+
 /** 제작 타이머: endAt(서버 시각)만 저장하고 화면마다 남은 시간을 계산 */
 export function timerState(c, now) {
   const t = { total: 0, endAt: 0, remain: 0, running: false, ...(c?.timer || {}) };

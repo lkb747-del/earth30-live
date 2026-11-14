@@ -29,6 +29,7 @@ async function checked() {
 $('#tNew').onclick = () => { location.href = 'teacher.html?new=1'; };
 $('#tGo').onclick = async () => { const c = await checked(); if (c) location.href = `teacher.html?code=${c}`; };
 $('#teamGo').onclick = async () => { const c = await checked(); if (c) location.href = `team.html?code=${c}`; };
+$('#obsGo').onclick = async () => { const c = await checked(); if (c) location.href = `observer.html?code=${c}`; };
 $('#schools').innerHTML = T.schools.map((s) => `<button class="btn" data-s="${s.id}">${esc(s.name)}</button>`).join('');
 $('#schools').onclick = async (e) => {
   const b = e.target.closest('[data-s]');

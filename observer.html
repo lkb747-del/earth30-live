@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>참관 · 30초 지구 라이브</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body class="mobile obs">
+<div class="boot" id="boot">불러오는 중… 이 글자가 계속 보이면 폴더의 <b>start-demo.bat</b>으로 열어 주세요.</div>
+<header class="m-top">
+  <span class="onair" id="onair">ON AIR</span>
+  <b id="title"></b>
+  <span class="m-stage" id="stageName"></span>
+  <span class="conn" id="conn"></span>
+</header>
+<main class="o-wrap">
+  <p class="muted small o-welcome" id="welcome"></p>
+  <section class="m-card o-clap" id="clap" hidden></section>
+  <section class="m-card" id="summary" hidden></section>
+  <section class="m-card o-now" id="now"></section>
+  <section class="m-card">
+    <h3>👥 일곱 모둠 지금 상황</h3>
+    <div class="o-teams" id="teams"></div>
+  </section>
+  <div class="o-space"></div>
+</main>
+<form class="o-memo" id="memo">
+  <div class="o-tags" id="tags"></div>
+  <div class="row"><input type="text" id="memoText" maxlength="100" autocomplete="off"><button class="btn cue" type="submit">📝 보내기</button></div>
+  <p class="muted small" id="memoCount" style="margin:0"></p>
+</form>
+<script type="module" src="js/observer.js"></script>
+</body>
+</html>
