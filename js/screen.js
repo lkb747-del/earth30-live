@@ -118,6 +118,11 @@ const LIVE = {
   reflect: (c) => VIEWS.reflect(c),
 };
 function sceneHtml(sc, c) {
+  // PPT 슬라이드 그림 장면: 교사가 PPT에서 고친 그대로 보여 준다. timer = [왼쪽 %, 위 %, 너비 %, 높이 %] 자리에 실시간 남은 시간
+  if (sc.kind === 'slide') {
+    const tm = sc.timer ? `<div class="sl-timer" style="left:${sc.timer[0]}%;top:${sc.timer[1]}%;width:${sc.timer[2]}%;height:${sc.timer[3]}%"><span id="slTimer"></span></div>` : '';
+    return `<div class="sc-slide"><div class="sl-box"><img src="${esc(sc.img)}" alt="${esc(sc.title || '')}">${tm}</div></div>`;
+  }
   const body = sc.kind === 'title'
     ? `<h1 class="sc-big">${esc(sc.title)}</h1>${sc.sub ? `<p class="sc-sub">${esc(sc.sub)}</p>` : ''}${sc.teams ? `<div class="sc-teams">${ORDER.map((t) => `<span><b class="no" style="background:${t.color}">${t.goal}</b>${esc(t.school)} ${esc(t.name)}</span>`).join('')}</div>` : ''}`
     : sc.kind === 'cards'
@@ -137,6 +142,7 @@ function render() {
   const sc = sceneOf(L, c);
   $('#stageName').innerHTML = `<small>${L.scenes.indexOf(sc) + 1}/${L.scenes.length}</small>${esc(st.name)}`;
   const html = sceneHtml(sc, c);
+  document.body.classList.toggle('slidemode', sc.kind === 'slide');
   if (html !== lastHtml) { $('#view').innerHTML = html; lastHtml = html; }
   watchGauge(gaugeV(c, L));
   showAlert(c.alert, now());
@@ -242,6 +248,8 @@ function tick() {
     const txt = nc ? `다음 알림 <b>${nc.at}분</b> ${esc(nc.icon)} ${esc(nc.msg)}` : (t.left <= 0 ? '제작 시간 끝!' : '');
     if ($('#nextCue').innerHTML !== txt) $('#nextCue').innerHTML = txt;
   }
+  const slt = $('#slTimer');
+  if (slt) { slt.textContent = mmss(t.total ? t.left : (L.makeTimerMinutes || 23) * 60000); slt.classList.toggle('warn', !!t.total && t.left <= 5 * 60000); }
   // 제작 중 다른 장면을 띄워도 위쪽에 남은 시간이 보이게
   const mini = $('#miniClock');
   mini.hidden = !t.running || !!clock;

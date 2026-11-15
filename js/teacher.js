@@ -109,6 +109,8 @@ function renderStages() {
   $('#scNow').textContent = sceneName(sc);
   $('#scNext').textContent = nx ? `다음 ▶ ${sceneName(nx)}` : '마지막 장면이에요';
   $('#scNotes').innerHTML = esc(sc.notes || '').replace(/\n/g, '<br>');
+  $('#scImg').hidden = !sc.img;
+  if (sc.img && !$('#scImg').src.endsWith(sc.img)) $('#scImg').src = sc.img;
   $('#scList').innerHTML = SC.map((s, k) => `<button class="${s === sc ? 'on' : ''}" data-sc="${s.id}" title="${esc(sceneName(s))}">${k + 1}</button>`).join('');
 }
 const sceneName = (s) => sceneLabel(L, s);
@@ -207,7 +209,12 @@ $('#quiz').onclick = (e) => {
   const b = e.target.closest('[data-q]');
   if (!b) return;
   const p = b.dataset.p;
-  if (b.dataset.q === 'open') { setScene(SC.find((s) => s.on?.quiz === p)); sfx.go(); }
+  if (b.dataset.q === 'open') {
+    const qs = SC.find((s) => s.on?.quiz === p);
+    // 슬라이드 장면에는 퀴즈 장면이 없을 수 있어서, 그때는 퀴즈 상태만 연다
+    if (qs) setScene(qs); else store.update(C('quiz'), { poll: p, open: true, revealed: false, device: !!(ctl().quiz || {}).device });
+    sfx.go();
+  }
   if (b.dataset.q === 'close') store.update(C('quiz'), { open: false });
   if (b.dataset.q === 'reveal') store.update(C('quiz'), { open: false, revealed: true });
 };
