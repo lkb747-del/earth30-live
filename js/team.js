@@ -164,6 +164,7 @@ const VIEWS = {
         ${received.length ? `<h3>🔔 받은 알림</h3><div class="m-alerts">${received.slice(-3).reverse().map((a) => `<div>${esc(a.icon)} ${esc(a.msg)}</div>`).join('')}</div>` : ''}
       </section><section class="m-card"><h3>🎬 컷 진행</h3>
         ${L.cuts.map((c) => `<button class="check ${d.progress?.[c.id] ? 'on' : ''}" data-act="cut" data-k="${c.id}">${esc(c.name)}<small>${esc(c.sec)}</small></button>`).join('')}
+        <a class="btn promgo" href="${esc(L.promisePadlet)}" target="_blank" rel="noopener">${esc(L.promiseGo)}</a>
         <button class="check ${d.promise ? 'on' : ''}" data-act="promise">${esc(L.promiseCheck)}</button>
         ${me.canva ? `<a class="btn canvab" href="${esc(me.canva)}" target="_blank" rel="noopener">🎨 우리 팀 캔바 양식 열기</a>` : ''}
         ${videoButton(d, c)}
@@ -195,7 +196,7 @@ const VIEWS = {
       ${v >= L.gauge.goal ? `<p class="m-cele">${esc(v >= L.gauge.max ? L.gauge.celebrate100 : L.gauge.celebrate80)}</p>` : ''}`;
     const body = {
       views: `<h2>${esc(R.question)}</h2><div class="m-ans">${R.answers.map((a) => `<span>${esc(a)}</span>`).join('')}</div><p class="m-problem">${esc(R.sentence)}</p>`,
-      promise: `<h2>✍️ ${esc(R.promise.title)}</h2><p class="m-wait">“${esc(R.promise.card)}”</p><p class="m-problem">${esc(R.promise.note)}</p>`,
+      promise: `<h2>✍️ ${esc(R.promise.title)}</h2><p class="m-wait">“${esc(R.promise.card)}”</p><p class="m-problem">${esc(R.promise.note)}</p><a class="btn promgo" href="${esc(L.promisePadlet)}" target="_blank" rel="noopener">${esc(L.promiseGo)}</a>`,
       stars: `<h2>⭐ ${esc(R.stars.title)}</h2><p class="m-problem">${esc(R.stars.how)}</p><div class="m-ans col">${R.stars.items.map((a) => `<span>${esc(a)}</span>`).join('')}</div>`,
       gauge,
       next: `<h2>${esc(R.next.title)}</h2><p class="m-wait">${esc(R.next.text)}</p>`,

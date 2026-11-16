@@ -372,7 +372,7 @@ function renderTeams() {
       <header><span class="no" style="background:${t.color}">${t.goal}</span><div><b>${esc(t.name)}</b><small>${esc(t.school)} · ${esc(t.goalName)}</small></div><span class="dot ${on ? 'on' : ''}" title="${on ? '접속 중' : '접속 안 됨'}"></span></header>
       <div class="hook">${d.hook ? `“${esc(d.hook)}”` : '<span class="muted">훅 고르는 중</span>'}</div>
       <div class="cutline">재료 ${prep}/${L.prepChecklist.length} · 컷 ${cuts}</div>
-      <div class="cutline">🖐 ${d.severity?.before ?? '–'} → ${d.severity?.after ?? '–'}${d.promise ? ' · ✍️ 약속 카드' : ''}</div>
+      <div class="cutline">🖐 ${d.severity?.before ?? '–'} → ${d.severity?.after ?? '–'}${d.promise ? ' · ✍️ 약속' : ''}</div>
       ${d.uploaded ? '<div class="up">📤 업로드 완료</div>' : ''}
       ${d.video ? `<div class="vrow ${videoOk(t.id) ? 'ok' : ''}"><span>🎬 ${videoOk(t.id) ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id) ? '' : 'cue'}" data-preview="${t.id}">${videoOk(t.id) ? '📤 받기 · 보기' : '▶ 보고 승인'}</button></div>` : ''}
       ${d.ng ? `<div class="vrow ${videoOk(t.id, 'ng') ? 'ok' : ''}"><span>${esc(L.video.ng.teacher)} ${videoOk(t.id, 'ng') ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id, 'ng') ? '' : 'cue'}" data-preview="${t.id}" data-kind="ng">▶ 보고 승인</button></div>` : ''}
