@@ -122,7 +122,7 @@ picker.onchange = async () => {
     if (old?.path) store.removeFile(old.path);
     if (k === 'video') store.set(`${tb}/uploaded`, true);
     sfx.win(); burst(100);
-  } catch { toast('⚠️', VID.failed); }
+  } catch (e) { toast('⚠️', k === 'ng' && e?.message === 'video record' ? NG.blocked : VID.failed); }
   upPct = null; lastHtml = ''; render();
 };
 

@@ -62,6 +62,12 @@ async function ensureSession() {
     if (!ok) fatal(`수업을 만들 권한이 없어요. Firebase 보안 규칙의 TEACHER_EMAIL이 지금 로그인한 ${email}과 같은지 확인해 주세요.`);
     await store.set(`pins/${c}`, Object.fromEntries(T.teams.map((t) => [t.id, String(1000 + Math.floor(Math.random() * 9000))])));
   }
+  else {
+    // 세션을 만든 뒤 팀이 늘었으면(예: 임정중) 빠진 PIN만 채운다
+    const pins = (await store.get(`pins/${c}`)) || {};
+    const miss = T.teams.filter((t) => !pins[t.id]);
+    if (miss.length) await store.update(`pins/${c}`, Object.fromEntries(miss.map((t) => [t.id, String(1000 + Math.floor(Math.random() * 9000))])));
+  }
   localStorage.setItem('e30:teacherCode', c);
   localStorage.setItem('e30:lastCode', c);
   history.replaceState(null, '', `teacher.html?code=${c}`);
@@ -247,7 +253,7 @@ function startPrem(id, phase = 'count') {
 }
 function renderPrem() {
   const pr = prem(), done = ctl().premDone || {};
-  $('#order').innerHTML = TEAMS.map((t, i) => `<button class="team ${done[t.id] ? 'done' : ''}" aria-pressed="${pr.teamId === t.id}" data-pt="${t.id}" style="--c:${t.color}"><span class="idx">${i + 1}</span>${teamChip(t)}</button>`).join('');
+  $('#order').innerHTML = TEAMS.map((t, i) => `<button class="team ${done[t.id] ? 'done' : ''}" aria-pressed="${pr.teamId === t.id}" data-pt="${t.id}" style="--c:${t.color}"><span class="idx">${i + 1}</span>${teamChip(t)}${videoOk(t.id, 'ng') ? '<span class="ngtag">😂</span>' : ''}</button>`).join('');
   const nx = nextTeam(pr.teamId);
   $('#pNext').textContent = nx ? `다음 팀 ▶ ${nx.name}` : '다음 팀 없음';
   $('#pNext').disabled = !nx;
@@ -259,6 +265,14 @@ $('#pBehind').onclick = () => startPrem(prem().teamId, 'behind');
 $('#pRestart').onclick = () => startPrem(prem().teamId);
 $('#pNext').onclick = () => { const nx = nextTeam(prem().teamId); if (nx) startPrem(nx.id); };
 $('#pClose').onclick = () => store.set(C('premiere'), { startedAt: 0 });
+// 본편·NG컷 상태 한 줄: 없음 / 확인 필요(▶ 보고 승인) / 승인됨
+function vidState(id, k) {
+  const v = S.teams?.[id]?.[k], name = k === 'ng' ? L.video.ng.teacher : '🎬 본편';
+  if (!v) return `<span class="pv none">${esc(name)} 없음</span>`;
+  const ok = videoOk(id, k);
+  return `<span class="pv ${ok ? 'ok' : 'wait'}">${esc(name)} ${ok ? '승인됨' : '확인 필요'} <button class="btn sm ${ok ? '' : 'cue'}" data-preview="${id}" data-kind="${k}">▶ 보고 승인</button></span>`;
+}
+$('#premNow').onclick = (e) => { const p = e.target.closest('[data-preview]'); if (p) openPreview(p.dataset.preview, p.dataset.kind); };
 function tickPrem() {
   const pr = prem(), ph = premPhase(pr, now(), P);
   const live = !!ph && ph.phase !== 'done' && stageId() === 'premiere';
@@ -268,7 +282,8 @@ function tickPrem() {
   else {
     const t = TEAMS.find((x) => x.id === pr.teamId);
     const hearts = sum(S.hearts?.[t.id]);
-    html = `<div class="phase-label">● ${PHASE_NAME[ph.phase]}${ph.left ? ` · ${ph.left}초` : ''}</div>${esc(t.school)} ${esc(t.name)} <span class="muted small">💖 ${hearts}</span>`;
+    html = `<div class="phase-label">● ${PHASE_NAME[ph.phase]}${ph.left ? ` · ${ph.left}초` : ''}</div>${esc(t.school)} ${esc(t.name)} <span class="muted small">💖 ${hearts}</span>
+      <div class="pvids">${vidState(t.id, 'video')}${vidState(t.id, 'ng')}</div>`;
     if (ph.phase === 'done' && !(ctl().premDone || {})[t.id]) store.set(C(`premDone/${t.id}`), true);
   }
   if ($('#premNow').innerHTML !== html) $('#premNow').innerHTML = html;
@@ -514,6 +529,11 @@ function render() {
 }
 store.watch(base, (v) => { S = v || {}; if (!S.control) S.control = {}; render(); });
 store.watch(`pins/${code}`, (v) => { PINS = v || {}; renderPins(); });
+// 실시간 모드: 서버 규칙에 NG컷(ng) 자리가 있는지 시험 기록으로 확인 (바로 지움). 없으면 프리미어 패널에 경고
+if (!store.isDemo) (async () => {
+  const ok = await store.set(`${base}/teams/_rulecheck/ng`, { url: 'https://firebasestorage.googleapis.com/rulecheck', path: `videos/${code}/_rulecheck/x.mp4`, size: 1, at: 1 }, { quiet: true });
+  if (ok) store.remove(`${base}/teams/_rulecheck`); else $('#ngRuleWarn').hidden = false;
+})();
 store.watch(`members/${code}`, (v) => { MEMBERS = v || {}; renderPins(); });
 setInterval(() => { tickTimer(); tickPrem(); }, 250);
 setInterval(renderTeams, 5000);

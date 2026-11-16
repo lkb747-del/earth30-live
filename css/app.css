@@ -538,3 +538,10 @@ body.tv.slidemode .s-main { padding: 0; }
 .sl-timer span { font-family: var(--mono); font-weight: 900; font-size: 7.4cqw; line-height: 1; color: #1E9C6E; }
 .sl-timer span.warn { color: #E5484D; }
 .sc-thumb { display: block; width: 100%; max-width: 360px; margin-top: 8px; border-radius: 8px; border: 1px solid var(--line); }
+
+/* 프리미어 패널: 지금 팀의 본편·NG컷 상태 */
+.pvids { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 15px; }
+.pv { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.06); }
+.pv.ok { color: var(--mint); } .pv.wait { color: var(--cue); } .pv.none { color: var(--mute, #8a93a8); }
+.ngtag { margin-left: 4px; font-size: 14px; }
+.warnline { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(229,72,77,.15); color: #ff9a9e; font-size: 14px; }

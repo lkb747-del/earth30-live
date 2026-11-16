@@ -109,6 +109,6 @@ async function send(f, k = 'video') {
     if (old?.path) store.removeFile(old.path);
     if (k === 'video') store.set(`${tb}/uploaded`, true);
     sfx.win(); burst(100); toast(k === 'ng' ? '😂' : '🎬', k === 'ng' ? NG.done : PH.done);
-  } catch { toast('⚠️', VID.failed); }
+  } catch (e) { toast('⚠️', k === 'ng' && e?.message === 'video record' ? NG.blocked : VID.failed); }
   upPct[k] = null; render();
 }
