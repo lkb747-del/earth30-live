@@ -71,9 +71,12 @@ export const uid = () => auth.currentUser?.uid || null;
 /* 영상 파일: Firebase Storage (videos/{code}/{teamId}/파일). 누가 올렸는지 uid를 메타데이터에 남긴다 */
 const storage = ST.getStorage(app);
 /** 올리면서 진행률(0~1)을 onProgress로 알려 주고, 끝나면 재생 주소를 돌려준다 */
-export function uploadFile(path, file, onProgress) {
+// saveName: 교사가 「📤 영상 받기」로 내려받을 때 쓸 파일 이름 (링크를 열면 바로 저장되게 Content-Disposition에 넣음. 재생에는 영향 없음)
+export function uploadFile(path, file, onProgress, saveName) {
   return new Promise((ok, no) => {
-    const task = ST.uploadBytesResumable(ST.ref(storage, path), file, { contentType: file.type, customMetadata: { uid: uid() } });
+    const meta = { contentType: file.type, customMetadata: { uid: uid() } };
+    if (saveName) meta.contentDisposition = `attachment; filename="video.mp4"; filename*=UTF-8''${encodeURIComponent(saveName)}`;
+    const task = ST.uploadBytesResumable(ST.ref(storage, path), file, meta);
     task.on('state_changed', (s) => onProgress?.(s.bytesTransferred / s.totalBytes),
       (e) => { report(e, path); no(e); },
       async () => { try { ok(await ST.getDownloadURL(task.snapshot.ref)); } catch (e) { report(e, path); no(e); } });

@@ -270,7 +270,7 @@ function vidState(id, k) {
   const v = S.teams?.[id]?.[k], name = k === 'ng' ? L.video.ng.teacher : '🎬 본편';
   if (!v) return `<span class="pv none">${esc(name)} 없음</span>`;
   const ok = videoOk(id, k);
-  return `<span class="pv ${ok ? 'ok' : 'wait'}">${esc(name)} ${ok ? '승인됨' : '확인 필요'} <button class="btn sm ${ok ? '' : 'cue'}" data-preview="${id}" data-kind="${k}">▶ 보고 승인</button></span>`;
+  return `<span class="pv ${ok ? 'ok' : 'wait'}">${esc(name)} ${ok ? '승인됨' : '확인 필요'} <button class="btn sm ${ok ? '' : 'cue'}" data-preview="${id}" data-kind="${k}">${ok && k === 'video' ? '📤 받기 · 보기' : '▶ 보고 승인'}</button></span>`;
 }
 $('#premNow').onclick = (e) => { const p = e.target.closest('[data-preview]'); if (p) openPreview(p.dataset.preview, p.dataset.kind); };
 function tickPrem() {
@@ -374,7 +374,7 @@ function renderTeams() {
       <div class="cutline">재료 ${prep}/${L.prepChecklist.length} · 컷 ${cuts}</div>
       <div class="cutline">🖐 ${d.severity?.before ?? '–'} → ${d.severity?.after ?? '–'}${d.promise ? ' · ✍️ 약속 카드' : ''}</div>
       ${d.uploaded ? '<div class="up">📤 업로드 완료</div>' : ''}
-      ${d.video ? `<div class="vrow ${videoOk(t.id) ? 'ok' : ''}"><span>🎬 ${videoOk(t.id) ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id) ? '' : 'cue'}" data-preview="${t.id}">▶ 보고 승인</button></div>` : ''}
+      ${d.video ? `<div class="vrow ${videoOk(t.id) ? 'ok' : ''}"><span>🎬 ${videoOk(t.id) ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id) ? '' : 'cue'}" data-preview="${t.id}">${videoOk(t.id) ? '📤 받기 · 보기' : '▶ 보고 승인'}</button></div>` : ''}
       ${d.ng ? `<div class="vrow ${videoOk(t.id, 'ng') ? 'ok' : ''}"><span>${esc(L.video.ng.teacher)} ${videoOk(t.id, 'ng') ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id, 'ng') ? '' : 'cue'}" data-preview="${t.id}" data-kind="ng">▶ 보고 승인</button></div>` : ''}
       ${ask ? `<div class="sos"><b>🆘 ${esc(d.sos.q)}</b><button class="btn sm" data-resolve="${t.id}">해결</button></div>` : ''}
     </article>`;
@@ -394,6 +394,21 @@ $('#teams').onclick = (e) => {
 // NG컷도 같은 방식: teams/{id}/ng + control/ngOk/{팀}. 시사회 비하인드 20초에 상영
 const OKK = { video: 'videoOk', ng: 'ngOk' };
 const videoOk = (id, k = 'video') => { const v = S.teams?.[id]?.[k]; return !!v && ctl()[OKK[k]]?.[id] === v.at; };
+// 📤 승인된 본편 내려받기: 받을 수 있으면 파일로 저장, 막히면(예전에 올린 영상 등) 새 탭에서 열어 「다른 이름으로 저장」
+async function saveVideo(t, v) {
+  const ext = (v.path?.split('.').pop() || 'mp4'), name = `${t.school}_${t.name}_쇼츠.${ext}`;
+  if (!store.isDemo) {
+    const a = Object.assign(document.createElement('a'), { href: v.url, download: name, target: '_blank', rel: 'noopener' });
+    document.body.append(a); a.click(); a.remove();
+    return toast('📤', `${name} 받는 중 · 새 탭에 영상만 뜨면 영상에서 오른쪽 클릭 → 다른 이름으로 저장`);
+  }
+  try {
+    const blob = await (await fetch(await store.fileSrc(v.url))).blob();
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    toast('📤', `${name} 저장했어요`);
+  } catch { toast('⚠️', '영상을 받지 못했어요'); }
+}
 async function openPreview(id, k = 'video') {
   const t = TEAMS.find((x) => x.id === id), v = S.teams?.[id]?.[k];
   if (!v) return;
@@ -401,11 +416,16 @@ async function openPreview(id, k = 'video') {
   sh.innerHTML = `<div class="m-card"><h3>${k === 'ng' ? esc(L.video.ng.teacher) : '🎬'} ${esc(t.school)} ${esc(t.name)} ${k === 'ng' ? '' : '영상'}</h3>
     <video controls playsinline src="${esc(await store.fileSrc(v.url))}"></video>
     <p class="muted small" style="margin:0">이름·학교 이름이 나오지 않는지, 얼굴이 나온 친구가 동의했는지, 숫자 출처가 있는지 확인해요</p>
+    ${k === 'video' && videoOk(id, k) ? `<div class="row share"><button class="btn cue" data-v="save">📤 영상 받기</button><button class="btn" data-v="copy">🔗 링크 복사</button><button class="btn" data-v="padlet">🎞 시사회관 패들렛 열기</button></div>
+    <p class="muted small" style="margin:0">받은 파일(${esc(t.school)}_${esc(t.name)}_쇼츠)을 패들렛에 끌어다 놓거나, 링크를 붙여 넣어요</p>` : ''}
     <div class="row">${videoOk(id, k) ? `<button class="btn" data-v="no">승인 취소</button>` : `<button class="btn go" data-v="ok">✅ 승인 (${k === 'ng' ? '시사회 비하인드에서 상영' : 'TV 시사회에서 상영'})</button>`}<button class="btn" data-v="close">닫기</button></div></div>`;
   sh.hidden = false;
   sh.onclick = (e) => {
     const b = e.target.closest('[data-v]');
     if (!b && e.target !== sh) return;
+    if (b?.dataset.v === 'save') return saveVideo(t, v);
+    if (b?.dataset.v === 'copy') { navigator.clipboard?.writeText(v.url).then(() => toast('🔗', '영상 링크를 복사했어요. 패들렛 글에 붙여 넣으세요'), () => prompt('영상 링크', v.url)); return; }
+    if (b?.dataset.v === 'padlet') { window.open(L.video.ng.padletUrl, 'e30padlet'); return; }
     if (b?.dataset.v === 'ok') store.set(C(`${OKK[k]}/${id}`), v.at);
     if (b?.dataset.v === 'no') store.remove(C(`${OKK[k]}/${id}`));
     $('video', sh)?.pause();

@@ -549,3 +549,5 @@ body.tv.slidemode .s-main { padding: 0; }
 .pv.ok { color: var(--mint); } .pv.wait { color: var(--cue); } .pv.none { color: var(--mute, #8a93a8); }
 .ngtag { margin-left: 4px; font-size: 14px; }
 .warnline { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(229,72,77,.15); color: #ff9a9e; font-size: 14px; }
+
+.m-card .row.share { flex-wrap: wrap; }

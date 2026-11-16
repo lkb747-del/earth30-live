@@ -116,7 +116,7 @@ picker.onchange = async () => {
   const path = `videos/${base.split('/')[1]}/${me.id}/${k === 'ng' ? 'ng-' : ''}${Date.now()}.${ext}`;
   upPct = 0; lastHtml = ''; render();
   try {
-    const url = await store.uploadFile(path, f, (p) => { upPct = p; const b = $(k === 'ng' ? '#ngBtn' : '#vidBtn'); if (b) b.textContent = `${VID.uploading} ${Math.round(p * 100)}%`; });
+    const url = await store.uploadFile(path, f, (p) => { upPct = p; const b = $(k === 'ng' ? '#ngBtn' : '#vidBtn'); if (b) b.textContent = `${VID.uploading} ${Math.round(p * 100)}%`; }, `${me.school}_${me.name}_${k === 'ng' ? 'NG컷' : '쇼츠'}.${ext}`);
     // 기록이 막히면(데이터베이스 규칙) 방금 올린 파일은 지우고 실패로 알린다
     if (!(await store.set(`${tb}/${k}`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);

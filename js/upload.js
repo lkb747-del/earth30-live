@@ -104,7 +104,7 @@ async function send(f, k = 'video') {
       upPct[k] = p;
       const s = $(`.up-bar[data-k="${k}"] span`); if (s) s.style.width = `${Math.round(p * 100)}%`;
       const t = $(`.up-state[data-k="${k}"]`); if (t) t.textContent = `${VID.uploading} ${Math.round(p * 100)}%`;
-    });
+    }, `${me.school}_${me.name}_${k === 'ng' ? 'NG컷' : '쇼츠'}.${ext}`);
     if (!(await store.set(`${tb}/${k}`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);
     if (k === 'video') store.set(`${tb}/uploaded`, true);
