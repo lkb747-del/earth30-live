@@ -165,6 +165,7 @@ const VIEWS = {
       </section><section class="m-card"><h3>🎬 컷 진행</h3>
         ${L.cuts.map((c) => `<button class="check ${d.progress?.[c.id] ? 'on' : ''}" data-act="cut" data-k="${c.id}">${esc(c.name)}<small>${esc(c.sec)}</small></button>`).join('')}
         <button class="check ${d.promise ? 'on' : ''}" data-act="promise">${esc(L.promiseCheck)}</button>
+        ${me.canva ? `<a class="btn canvab" href="${esc(me.canva)}" target="_blank" rel="noopener">🎨 우리 팀 캔바 양식 열기</a>` : ''}
         ${videoButton(d, c)}
         <button class="btn upl ${d.uploaded ? 'done' : ''}" data-act="upload" ${d.uploaded ? 'disabled' : ''}>${d.uploaded ? '✅ 업로드 완료!' : '📤 다른 곳(패들렛)에 올렸어요'}</button>
         <button class="btn sosb ${sos ? 'sent' : ''}" data-act="sos">${sos ? `🆘 선생님께 보냈어요 · ${esc(d.sos.q)}` : '🆘 SOS 도움 요청'}</button>

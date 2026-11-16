@@ -551,3 +551,6 @@ body.tv.slidemode .s-main { padding: 0; }
 .warnline { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; background: rgba(229,72,77,.15); color: #ff9a9e; font-size: 14px; }
 
 .m-card .row.share { flex-wrap: wrap; }
+
+/* 팀 화면: 캔바 양식 바로가기 */
+.btn.canvab { display: block; text-align: center; text-decoration: none; background: #7D2AE8; border-color: #7D2AE8; color: #fff; margin-bottom: 8px; }

@@ -25,7 +25,7 @@
   ],
   "teams": [
     {
-      "id": "jg",
+      "id": "jg", "canva": "https://canva.link/myo4otb8r3k6s8h",
       "school": "정곡초",
       "schoolId": "jg",
       "name": "정육점",
@@ -43,7 +43,7 @@
       ]
     },
     {
-      "id": "yd",
+      "id": "yd", "canva": "https://canva.link/9t2jhlo08ronpg3",
       "school": "용덕초",
       "schoolId": "yd",
       "name": "오리돈까스",
@@ -63,7 +63,7 @@
     },
     {"id": "yd2", "school": "용덕초", "schoolId": "yd", "name": "임정중", "goal": 16, "goalName": "평화·정의", "color": "#00689D", "star": "다툼과 상처 주는 말", "fact": "전 세계 어린이 6명 중 1명이 분쟁이 있는 곳에서 살고 있다.", "source": "유니세프 (2024)", "action": "화가 날 때 3초만 멈추고 말로 해 줄래?", "hooks": ["전쟁은 왜 시작될까?", "어린이 6명 중 1명이 전쟁터에 산다고?!", "평화는 말 한마디에서 시작돼"], "note": "실제 다툼 장면 연기·친구 흉내 금지. 누가 한 말인지 쓰지 않기."},
     {
-      "id": "u1",
+      "id": "u1", "canva": "https://canva.link/uyqoqv7uchm2rto",
       "school": "의령초",
       "schoolId": "ur",
       "name": "원펀맨",
@@ -81,7 +81,7 @@
       ]
     },
     {
-      "id": "u2",
+      "id": "u2", "canva": "https://canva.link/c0ayixerw4l7cam",
       "school": "의령초",
       "schoolId": "ur",
       "name": "가난의 힘",
@@ -99,7 +99,7 @@
       ]
     },
     {
-      "id": "u3",
+      "id": "u3", "canva": "https://canva.link/hjcwc974t4hgw1y",
       "school": "의령초",
       "schoolId": "ur",
       "name": "바다",
@@ -117,7 +117,7 @@
       ]
     },
     {
-      "id": "u4",
+      "id": "u4", "canva": "https://canva.link/88r78g7kreuirhe",
       "school": "의령초",
       "schoolId": "ur",
       "name": "맑음",
@@ -135,7 +135,7 @@
       ]
     },
     {
-      "id": "u5",
+      "id": "u5", "canva": "https://canva.link/2dtoovi34u93ns4",
       "school": "의령초",
       "schoolId": "ur",
       "name": "숲속",

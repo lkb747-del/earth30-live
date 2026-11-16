@@ -464,32 +464,35 @@ $('#printCards').onclick = async () => {
   const cards = await Promise.all(TEAMS.map(async (t) => {
     const url = pageUrl('upload.html', { code, team: t.id, pin: PINS[t.id] || '' });
     const svg = await qrSvg(url).catch(() => '');
+    const cv = t.canva ? await qrSvg(t.canva).catch(() => '') : '';
     return `<section class="card" style="--c:${t.color}">
       <header><span class="no">${t.goal}</span><div><b>${esc(t.school)} ${esc(t.name)}</b><small>${esc(t.goalName)}</small></div><h1>${esc(K.title)}</h1></header>
       <div class="body"><div class="qr">${svg}</div>
         <div class="info"><div class="pin"><small>${esc(K.pinLabel)}</small><b>${esc(PINS[t.id] || '____')}</b></div>
           <div class="code"><small>${esc(K.codeLabel)}</small><b>${esc(code)}</b></div>
           <ol>${K.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
-          <p class="tip">${esc(K.teamLabel)}</p></div></div>
+          <p class="tip">${esc(K.teamLabel)}</p>
+          ${cv ? `<div class="cv"><div class="cvq">${cv}</div><p><b>🎨 우리 팀 캔바 양식</b><br>찍으면 양식이 바로 열려요<br><small>(CapCut · VLLO로 만들어도 돼요)</small></p></div>` : ''}</div></div>
       <footer>⚠️ ${esc(K.warn)}<span class="url">${esc(url)}</span></footer></section>`;
   }));
   win.document.open();
   win.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>모둠 카드 · ${esc(code)}</title><style>
     @page { size: A4; margin: 10mm; }
     * { box-sizing: border-box; } body { margin: 0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; color: #111; }
-    .card { height: 136mm; border: 2px dashed #999; border-radius: 6mm; padding: 7mm 9mm; margin-bottom: 5mm; display: flex; flex-direction: column; gap: 4mm; break-inside: avoid; }
+    .card { height: 134mm; overflow: hidden; border: 2px dashed #999; border-radius: 6mm; padding: 5mm 9mm; margin-bottom: 5mm; display: flex; flex-direction: column; gap: 3mm; break-inside: avoid; }
     .card:nth-of-type(2n) { break-after: page; }
     header { display: flex; align-items: center; gap: 4mm; border-bottom: 3px solid var(--c); padding-bottom: 3mm; }
     .no { background: var(--c); color: #fff; font-weight: 900; font-size: 22pt; width: 15mm; height: 15mm; border-radius: 3mm; display: grid; place-items: center; }
     header b { font-size: 17pt; display: block; } header small { color: #666; font-size: 10pt; }
     header h1 { margin: 0 0 0 auto; font-size: 13pt; color: #444; }
     .body { display: flex; gap: 8mm; flex: 1; align-items: center; }
-    .qr { width: 72mm; flex: none; } .qr svg { width: 100%; height: auto; display: block; }
-    .info { flex: 1; display: grid; gap: 3mm; }
+    .qr { width: 64mm; flex: none; } .qr svg { width: 100%; height: auto; display: block; }
+    .info { flex: 1; display: grid; gap: 2.2mm; }
     .pin, .code { border: 2px solid var(--c); border-radius: 3mm; padding: 2mm 4mm; display: flex; align-items: baseline; gap: 4mm; }
     .pin small, .code small { font-size: 11pt; color: #555; width: 22mm; }
     .pin b { font-size: 30pt; letter-spacing: 4pt; font-family: Consolas, monospace; } .code b { font-size: 18pt; letter-spacing: 3pt; font-family: Consolas, monospace; }
-    ol { margin: 0; padding-left: 6mm; font-size: 11.5pt; line-height: 1.5; } .tip { margin: 0; font-size: 9.5pt; color: #666; }
+    ol { margin: 0; padding-left: 6mm; font-size: 10.5pt; line-height: 1.4; } .tip { margin: 0; font-size: 9.5pt; color: #666; }
+    .cv { display: flex; align-items: center; gap: 3mm; border-top: 1px dashed #bbb; padding-top: 2mm; } .cvq { width: 21mm; flex: none; } .cvq svg { width: 100%; height: auto; display: block; } .cv p { margin: 0; font-size: 10pt; line-height: 1.35; } .cv small { color: #777; }
     footer { font-size: 9.5pt; color: #a33; display: flex; justify-content: space-between; gap: 4mm; } .url { color: #888; font-family: Consolas, monospace; font-size: 8pt; word-break: break-all; text-align: right; }
     .bar { position: sticky; top: 0; background: #fffbe6; padding: 8px; text-align: center; font-size: 14px; } @media print { .bar { display: none; } }
   </style></head><body><div class="bar">세션 코드 <b>${esc(code)}</b> · ${TEAMS.length}팀 · <button onclick="print()">🖨 인쇄</button> (이 세션을 당일에도 「이 코드로 이어서 하기」로 써야 카드가 맞아요)</div>${cards.join('')}</body></html>`);
