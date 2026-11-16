@@ -89,13 +89,18 @@ function sevPicker(kind) {
 
 /* ── 영상 올리기: 팀이 고른 파일 → 저장소 → teams/{id}/video. 교사가 승인(control/videoOk = video.at)해야 TV에서 상영 ── */
 const VID = L.video;
-let upPct = null;
+let upPct = null, upKind = 'video';
+const NG = VID.ng;
 const picker = Object.assign(document.createElement('input'), { type: 'file', accept: 'video/mp4,video/*', hidden: true });
 document.body.append(picker);
 function videoButton(d, c) {
   const v = d.video, ok = v && c.videoOk?.[me.id] === v.at;
-  const label = upPct !== null ? `${VID.uploading} ${Math.round(upPct * 100)}%` : !v ? VID.upload : `${ok ? VID.approved : VID.waiting} · ${VID.again}`;
+  const busy = (k) => upPct !== null && upKind === k;
+  const label = busy('video') ? `${VID.uploading} ${Math.round(upPct * 100)}%` : !v ? VID.upload : `${ok ? VID.approved : VID.waiting} · ${VID.again}`;
+  const g = d.ng, gok = g && c.ngOk?.[me.id] === g.at;
+  const glabel = busy('ng') ? `${VID.uploading} ${Math.round(upPct * 100)}%` : !g ? NG.upload : `${gok ? NG.approved : NG.waiting} · ${VID.again}`;
   return `<button class="btn vidb ${v ? (ok ? 'ok' : 'wait') : ''}" data-act="video" ${upPct !== null ? 'disabled' : ''} id="vidBtn">${esc(label)}</button>
+    <button class="btn vidb ngb ${g ? (gok ? 'ok' : 'wait') : ''}" data-act="ng" ${upPct !== null ? 'disabled' : ''} id="ngBtn">${esc(glabel)}</button>
     <button class="btn qrb" data-act="qr">${esc(VID.phone.button)}</button>
     <p class="muted small" style="margin:0">${esc(VID.note)}</p>`;
 }
@@ -105,16 +110,17 @@ picker.onchange = async () => {
   if (!f) return;
   if (!f.type.startsWith('video/')) return toast('⚠️', VID.notVideo);
   if (f.size > VID.maxMB * 1024 * 1024) return toast('⚠️', VID.tooBig);
-  const old = my().video;
+  const k = upKind;
+  const old = my()[k];
   const ext = (f.name.split('.').pop() || 'mp4').replace(/[^a-z0-9]/gi, '').slice(0, 5) || 'mp4';
-  const path = `videos/${base.split('/')[1]}/${me.id}/${Date.now()}.${ext}`;
+  const path = `videos/${base.split('/')[1]}/${me.id}/${k === 'ng' ? 'ng-' : ''}${Date.now()}.${ext}`;
   upPct = 0; lastHtml = ''; render();
   try {
-    const url = await store.uploadFile(path, f, (p) => { upPct = p; const b = $('#vidBtn'); if (b) b.textContent = `${VID.uploading} ${Math.round(p * 100)}%`; });
+    const url = await store.uploadFile(path, f, (p) => { upPct = p; const b = $(k === 'ng' ? '#ngBtn' : '#vidBtn'); if (b) b.textContent = `${VID.uploading} ${Math.round(p * 100)}%`; });
     // 기록이 막히면(데이터베이스 규칙) 방금 올린 파일은 지우고 실패로 알린다
-    if (!(await store.set(`${tb}/video`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
+    if (!(await store.set(`${tb}/${k}`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);
-    store.set(`${tb}/uploaded`, true);
+    if (k === 'video') store.set(`${tb}/uploaded`, true);
     sfx.win(); burst(100);
   } catch { toast('⚠️', VID.failed); }
   upPct = null; lastHtml = ''; render();
@@ -272,7 +278,8 @@ $('#view').addEventListener('click', (e) => {
     case 'promise': store.set(`${tb}/promise`, !d.promise); if (!d.promise) sfx.pop(); break;
     case 'prep': store.set(`${tb}/prep/${b.dataset.k}`, !d.prep?.[b.dataset.k]); break;
     case 'cut': store.set(`${tb}/progress/${b.dataset.k}`, !d.progress?.[b.dataset.k]); if (!d.progress?.[b.dataset.k]) sfx.pop(); break;
-    case 'video': picker.click(); break;
+    case 'video': upKind = 'video'; picker.click(); break;
+    case 'ng': upKind = 'ng'; picker.click(); break;
     case 'qr': openQr(); break;
     case 'upload':
       if (confirm('앱 업로드가 안 돼서 패들렛 등 다른 곳에 영상을 올렸나요?')) { store.set(`${tb}/uploaded`, true); sfx.win(); burst(100); }

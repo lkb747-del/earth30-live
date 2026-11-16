@@ -8,7 +8,9 @@ import { burst } from './confetti.js';
 const { T, L } = await loadData();
 const VID = L.video, PH = VID.phone, now = store.serverNow;
 const ORDER = T.premiereOrder.map((id) => T.teams.find((t) => t.id === id));
-let me, tb, video = null, okAt = null, upPct = null;
+let me, tb;
+const rec = { video: null, ng: null }, okAt = { video: null, ng: null }, upPct = { video: null, ng: null };
+const NG = VID.ng, OKKEY = { video: 'videoOk', ng: 'ngOk' };
 
 $('#title').textContent = PH.title;
 $('#jLead').textContent = PH.lead;
@@ -66,40 +68,47 @@ function start(code, teamId) {
   $('#me').style.setProperty('--c', me.color);
   $('#me').innerHTML = teamChip(me);
   connBadge($('#conn'));
-  store.watch(`${tb}/video`, (v) => { video = v; render(); });
-  store.watch(`sessions/${code}/control/videoOk/${me.id}`, (v) => { okAt = v; render(); });
+  for (const k of ['video', 'ng']) {
+    store.watch(`${tb}/${k}`, (v) => { rec[k] = v; render(); });
+    store.watch(`sessions/${code}/control/${OKKEY[k]}/${me.id}`, (v) => { okAt[k] = v; render(); });
+  }
 }
 
+function box(k) {
+  const T2 = k === 'ng' ? { title: NG.title, pick: NG.pick, again: NG.again, none: NG.none, ok: NG.approved, wait: NG.waiting, note: NG.note }
+    : { title: PH.title, pick: PH.pick, again: PH.again, none: PH.none, ok: VID.approved, wait: VID.waiting, note: PH.note };
+  const v = rec[k], ok = v && okAt[k] === v.at, pct = upPct[k];
+  const state = pct !== null ? `${VID.uploading} ${Math.round(pct * 100)}%` : !v ? T2.none : ok ? T2.ok : T2.wait;
+  return `<section class="up-box ${k}"><h2>${esc(T2.title)}</h2>
+    ${k === 'video' ? `<ol class="up-steps">${PH.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}
+    <label class="btn up-pick ${pct !== null ? 'busy' : ''} ${k === 'ng' ? 'ngp' : ''}">${esc(v ? T2.again : T2.pick)}
+      <input type="file" data-k="${k}" accept="video/*" ${pct !== null ? 'disabled' : ''} hidden></label>
+    <div class="up-bar" data-k="${k}"><span style="width:${pct !== null ? Math.round(pct * 100) : v ? 100 : 0}%"></span></div>
+    <p class="up-state ${ok ? 'ok' : v ? 'wait' : ''}" data-k="${k}">${esc(state)}</p>
+    <p class="muted small">${esc(T2.note)}</p></section>`;
+}
 function render() {
-  const ok = video && okAt === video.at;
-  const state = upPct !== null ? `${VID.uploading} ${Math.round(upPct * 100)}%` : !video ? PH.none : ok ? VID.approved : VID.waiting;
-  $('#view').innerHTML = `<h2>${esc(PH.title)}</h2>
-    <ol class="up-steps">${PH.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
-    <label class="btn up-pick ${upPct !== null ? 'busy' : ''}">${esc(video ? PH.again : PH.pick)}
-      <input type="file" id="file" accept="video/*" ${upPct !== null ? 'disabled' : ''} hidden></label>
-    <div class="up-bar"><span style="width:${upPct !== null ? Math.round(upPct * 100) : video ? 100 : 0}%"></span></div>
-    <p class="up-state ${ok ? 'ok' : video ? 'wait' : ''}">${esc(state)}</p>
-    <p class="muted small">${esc(PH.note)}</p>`;
-  $('#file').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) send(f); };
+  $('#view').innerHTML = box('video') + box('ng');
+  document.querySelectorAll('#view input[type=file]').forEach((el) => { el.onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) send(f, el.dataset.k); }; });
 }
 
-async function send(f) {
+async function send(f, k = 'video') {
   if (!f.type.startsWith('video/')) return toast('⚠️', VID.notVideo);
   if (f.size > VID.maxMB * 1024 * 1024) return toast('⚠️', VID.tooBig);
-  const old = video;
+  const old = rec[k];
   const ext = (f.name.split('.').pop() || 'mp4').replace(/[^a-z0-9]/gi, '').slice(0, 5) || 'mp4';
-  const path = `videos/${tb.split('/')[1]}/${me.id}/${Date.now()}.${ext}`;
-  upPct = 0; render();
+  const path = `videos/${tb.split('/')[1]}/${me.id}/${k === 'ng' ? 'ng-' : ''}${Date.now()}.${ext}`;
+  upPct[k] = 0; render();
   try {
     const url = await store.uploadFile(path, f, (p) => {
-      upPct = p;
-      const s = $('.up-bar span'); if (s) s.style.width = `${Math.round(p * 100)}%`;
-      const t = $('.up-state'); if (t) t.textContent = `${VID.uploading} ${Math.round(p * 100)}%`;
+      upPct[k] = p;
+      const s = $(`.up-bar[data-k="${k}"] span`); if (s) s.style.width = `${Math.round(p * 100)}%`;
+      const t = $(`.up-state[data-k="${k}"]`); if (t) t.textContent = `${VID.uploading} ${Math.round(p * 100)}%`;
     });
-    if (!(await store.set(`${tb}/video`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
+    if (!(await store.set(`${tb}/${k}`, { url, path, size: f.size, at: now() }))) { store.removeFile(path); throw new Error('video record'); }
     if (old?.path) store.removeFile(old.path);
-    store.set(`${tb}/uploaded`, true);
-    sfx.win(); burst(100); toast('🎬', PH.done);
+    if (k === 'video') store.set(`${tb}/uploaded`, true);
+    sfx.win(); burst(100); toast(k === 'ng' ? '😂' : '🎬', k === 'ng' ? NG.done : PH.done);
   } catch { toast('⚠️', VID.failed); }
-  upPct = null; render();
+  upPct[k] = null; render();
 }

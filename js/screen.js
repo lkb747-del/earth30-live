@@ -151,18 +151,20 @@ function render() {
 
 /* 팀 영상: 교사가 승인한 영상만. 3·2·1 동안 미리 불러 두고, 상영이 시작되면 모든 TV가 같은 시각에 맞춰 튼다 */
 const vids = new Map();
-function approvedVideo(t, c) {
-  const v = S.teams?.[t.id]?.video;
-  return v && c.videoOk?.[t.id] === v.at ? v : null;
+// k = 'video'(본편, 상영 30초) | 'ng'(NG컷, 비하인드 20초). 승인 기록은 control/videoOk · control/ngOk
+function approvedVideo(t, c, k = 'video') {
+  const v = S.teams?.[t.id]?.[k];
+  return v && c[k === 'ng' ? 'ngOk' : 'videoOk']?.[t.id] === v.at ? v : null;
 }
-async function prepVideo(t, c) {
-  const v = approvedVideo(t, c);
+async function prepVideo(t, c, k = 'video') {
+  const v = approvedVideo(t, c, k);
   if (!v) return null;
-  let el = vids.get(t.id);
+  const key = `${t.id}:${k}`;
+  let el = vids.get(key);
   if (!el || el.dataset.at !== String(v.at)) {
     el = Object.assign(document.createElement('video'), { preload: 'auto', playsInline: true });
     el.dataset.at = v.at;
-    vids.set(t.id, el);
+    vids.set(key, el);
     el.src = await store.fileSrc(v.url);
   }
   return el;
@@ -205,15 +207,23 @@ function tickPrem(c) {
     if (ph.phase === 'count') { html = `<div class="count">${ph.left}</div>`; sfx.beep(); }
     if (ph.phase === 'intro') { html = card(`<div class="phase-label">● PREMIERE</div><div class="goal">${t.goal}</div><div class="tname">${esc(t.name)}</div><div class="sub">${esc(t.school)} · ${esc(t.goalName)}</div>`); if (first) sfx.go(); }
     const video = approvedVideo(t, c);
+    const ng = approvedVideo(t, c, 'ng');
     if (ph.phase === 'count' || ph.phase === 'intro') prepVideo(t, c);
-    if (ph.phase !== 'play') pauseVideos();
+    if (ph.phase === 'play') prepVideo(t, c, 'ng');
+    if (ph.phase !== 'play' && ph.phase !== 'behind') pauseVideos();
+    if (ph.phase === 'behind') vids.get(`${t.id}:video`)?.pause();
     if (ph.phase === 'play' && video) {
       html = `<div class="vplay" style="--c:${t.color}"><div class="vbox" id="vbox"></div>
         <div class="card"><div class="phase-label">● NOW SHOWING</div><div class="tname">${esc(t.name)}</div><div class="sub">${esc(t.school)} · ${esc(t.goalName)}</div>
         <div class="ring" id="ring"><span id="ringN"></span></div>${react}<p class="vhint" id="vhint" hidden>${esc(L.video.tapForSound)}</p></div></div>`;
       prepVideo(t, c).then((el) => { const box = $('#vbox', st); if (el && box && !box.contains(el)) box.replaceChildren(el); });
     } else if (ph.phase === 'play') html = card(`<div class="phase-label">● NOW SHOWING</div><div class="ring" id="ring"><span id="ringN"></span></div><div class="sub">${esc(t.school)} ${esc(t.name)} · 기기 화면으로 재생 중</div>${react}`);
-    if (ph.phase === 'behind') html = card(`<div class="phase-label">● BEHIND</div><div class="ring" id="ring"><span id="ringN"></span></div><div class="sub">만든 사람의 한마디 · “${esc(t.action)}”</div>${react}`);
+    if (ph.phase === 'behind' && ng) {
+      html = `<div class="vplay" style="--c:${t.color}"><div class="vbox" id="vbox"></div>
+        <div class="card"><div class="phase-label">${esc(L.video.ng.label)}</div><div class="tname">${esc(t.name)}</div><div class="sub">만든 사람의 한마디 · “${esc(t.action)}”</div>
+        <div class="ring" id="ring"><span id="ringN"></span></div>${react}<p class="vhint" id="vhint" hidden>${esc(L.video.tapForSound)}</p></div></div>`;
+      prepVideo(t, c, 'ng').then((el) => { const box = $('#vbox', st); if (el && box && !box.contains(el)) box.replaceChildren(el); });
+    } else if (ph.phase === 'behind') html = card(`<div class="phase-label">● BEHIND</div><div class="ring" id="ring"><span id="ringN"></span></div><div class="sub">만든 사람의 한마디 · “${esc(t.action)}”</div>${react}`);
     if (ph.phase === 'done') { html = card(`<div class="tname" style="color:var(--cue)">👏 박수!</div><div class="sub">${esc(t.name)} · 💖 ${hearts}</div>${nx ? `<div class="sub">다음 상영: ${esc(nx.school)} ${esc(nx.name)}</div>` : ''}`); if (first) { sfx.fanfare(); burst(160); } }
     st.innerHTML = html;
     st.hidden = false;
@@ -229,9 +239,9 @@ function tickPrem(c) {
     if (hearts > lastHearts) sfx.heart();
   }
   lastHearts = hearts;
-  if (ph.phase === 'play') {
-    const el = vids.get(t.id);
-    if (el && $('#vbox', st)?.contains(el)) syncVideo(el, (now() - (pr.startedAt || 0)) / 1000 - premOffset(P, 'play'));
+  if (ph.phase === 'play' || ph.phase === 'behind') {
+    const el = vids.get(`${t.id}:${ph.phase === 'play' ? 'video' : 'ng'}`);
+    if (el && $('#vbox', st)?.contains(el)) syncVideo(el, (now() - (pr.startedAt || 0)) / 1000 - premOffset(P, ph.phase));
   }
   return ph.phase !== 'done';
 }

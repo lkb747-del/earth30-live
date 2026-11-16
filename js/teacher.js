@@ -360,6 +360,7 @@ function renderTeams() {
       <div class="cutline">🖐 ${d.severity?.before ?? '–'} → ${d.severity?.after ?? '–'}${d.promise ? ' · ✍️ 약속 카드' : ''}</div>
       ${d.uploaded ? '<div class="up">📤 업로드 완료</div>' : ''}
       ${d.video ? `<div class="vrow ${videoOk(t.id) ? 'ok' : ''}"><span>🎬 ${videoOk(t.id) ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id) ? '' : 'cue'}" data-preview="${t.id}">▶ 보고 승인</button></div>` : ''}
+      ${d.ng ? `<div class="vrow ${videoOk(t.id, 'ng') ? 'ok' : ''}"><span>${esc(L.video.ng.teacher)} ${videoOk(t.id, 'ng') ? '승인됨' : '확인 필요'}</span><button class="btn sm ${videoOk(t.id, 'ng') ? '' : 'cue'}" data-preview="${t.id}" data-kind="ng">▶ 보고 승인</button></div>` : ''}
       ${ask ? `<div class="sos"><b>🆘 ${esc(d.sos.q)}</b><button class="btn sm" data-resolve="${t.id}">해결</button></div>` : ''}
     </article>`;
   }).join('');
@@ -371,25 +372,27 @@ $('#teams').onclick = (e) => {
   const b = e.target.closest('[data-resolve]');
   if (b) store.update(`${base}/teams/${b.dataset.resolve}/sos`, { resolved: true });
   const p = e.target.closest('[data-preview]');
-  if (p) openPreview(p.dataset.preview);
+  if (p) openPreview(p.dataset.preview, p.dataset.kind || 'video');
 };
 
 /* ── 영상 미리보기·승인: 승인 = control/videoOk/{팀} 에 그 영상의 올린 시각(at)을 적는다. 다시 올리면 다시 승인 필요 ── */
-const videoOk = (id) => { const v = S.teams?.[id]?.video; return !!v && ctl().videoOk?.[id] === v.at; };
-async function openPreview(id) {
-  const t = TEAMS.find((x) => x.id === id), v = S.teams?.[id]?.video;
+// NG컷도 같은 방식: teams/{id}/ng + control/ngOk/{팀}. 시사회 비하인드 20초에 상영
+const OKK = { video: 'videoOk', ng: 'ngOk' };
+const videoOk = (id, k = 'video') => { const v = S.teams?.[id]?.[k]; return !!v && ctl()[OKK[k]]?.[id] === v.at; };
+async function openPreview(id, k = 'video') {
+  const t = TEAMS.find((x) => x.id === id), v = S.teams?.[id]?.[k];
   if (!v) return;
   const sh = $('#vSheet');
-  sh.innerHTML = `<div class="m-card"><h3>🎬 ${esc(t.school)} ${esc(t.name)} 영상</h3>
+  sh.innerHTML = `<div class="m-card"><h3>${k === 'ng' ? esc(L.video.ng.teacher) : '🎬'} ${esc(t.school)} ${esc(t.name)} ${k === 'ng' ? '' : '영상'}</h3>
     <video controls playsinline src="${esc(await store.fileSrc(v.url))}"></video>
     <p class="muted small" style="margin:0">이름·학교 이름이 나오지 않는지, 얼굴이 나온 친구가 동의했는지, 숫자 출처가 있는지 확인해요</p>
-    <div class="row">${videoOk(id) ? `<button class="btn" data-v="no">승인 취소</button>` : `<button class="btn go" data-v="ok">✅ 승인 (TV 시사회에서 상영)</button>`}<button class="btn" data-v="close">닫기</button></div></div>`;
+    <div class="row">${videoOk(id, k) ? `<button class="btn" data-v="no">승인 취소</button>` : `<button class="btn go" data-v="ok">✅ 승인 (${k === 'ng' ? '시사회 비하인드에서 상영' : 'TV 시사회에서 상영'})</button>`}<button class="btn" data-v="close">닫기</button></div></div>`;
   sh.hidden = false;
   sh.onclick = (e) => {
     const b = e.target.closest('[data-v]');
     if (!b && e.target !== sh) return;
-    if (b?.dataset.v === 'ok') store.set(C(`videoOk/${id}`), v.at);
-    if (b?.dataset.v === 'no') store.remove(C(`videoOk/${id}`));
+    if (b?.dataset.v === 'ok') store.set(C(`${OKK[k]}/${id}`), v.at);
+    if (b?.dataset.v === 'no') store.remove(C(`${OKK[k]}/${id}`));
     $('video', sh)?.pause();
     sh.hidden = true;
     sh.innerHTML = '';
@@ -496,7 +499,7 @@ $('#reset').onclick = async () => {
   if (!confirm('한 번 더 확인할게요. 되돌릴 수 없어요. 초기화할까요?')) return;
   firedLocal = new Set();
   // 학생 영상은 수업이 끝나면 저장소에서도 지운다
-  await Promise.all(TEAMS.map((t) => S.teams?.[t.id]?.video?.path).filter(Boolean).map((p) => store.removeFile(p)));
+  await Promise.all(TEAMS.flatMap((t) => [S.teams?.[t.id]?.video?.path, S.teams?.[t.id]?.ng?.path]).filter(Boolean).map((p) => store.removeFile(p)));
   await store.set(base, { teacherUid: store.uid(), createdAt: now(), control: initialControl(L) });
   await store.remove(`members/${code}`);
   await store.remove(`observers/${code}`);

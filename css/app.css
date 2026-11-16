@@ -465,6 +465,9 @@ input[type="email"], input[type="password"] { background: #0A0E19; color: var(--
 .vidb { font-size: 20px; padding: 14px; justify-content: center; width: 100%; background: transparent; border: 3px solid var(--cue); color: var(--cue); }
 .vidb.wait { background: color-mix(in srgb, var(--cue) 18%, transparent); }
 .vidb.ok { background: var(--mint); border-color: var(--mint); color: #062216; }
+.vidb.ngb { font-size: 17px; padding: 10px; border-color: #FF7AA8; color: #FF7AA8; }
+.vidb.ngb.wait { background: color-mix(in srgb, #FF7AA8 18%, transparent); }
+.vidb.ngb.ok { background: var(--mint); border-color: var(--mint); color: #062216; }
 .vrow { display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--cue); }
 .vrow.ok { color: var(--mint); }
 #vSheet .m-card { width: min(520px, 100%); }
@@ -506,6 +509,9 @@ body.obs { padding-bottom: 150px; }
 .up-steps { margin: 0; padding-left: 22px; display: grid; gap: 6px; font-size: 17px; }
 .up-pick { font-size: 22px; padding: 18px; justify-content: center; width: 100%; background: var(--cue); color: #1a1600; border-color: var(--cue); cursor: pointer; }
 .up-pick.busy { opacity: .5; pointer-events: none; }
+/* NG컷: 본편과 구분되는 분홍 */
+.up-box + .up-box { margin-top: 26px; padding-top: 18px; border-top: 2px dashed rgba(255,255,255,.18); }
+.up-pick.ngp { background: #FF7AA8; border-color: #FF7AA8; color: #2a0614; }
 .up-bar { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; }
 .up-bar span { display: block; height: 100%; background: var(--mint); transition: width .2s; }
 .up-state { font-size: 20px; font-weight: 900; text-align: center; margin: 0; }
