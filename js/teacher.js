@@ -406,7 +406,14 @@ async function openPreview(id, k = 'video') {
   sh.onclick = (e) => {
     const b = e.target.closest('[data-v]');
     if (!b && e.target !== sh) return;
-    if (b?.dataset.v === 'ok') store.set(C(`${OKK[k]}/${id}`), v.at);
+    if (b?.dataset.v === 'ok') {
+      store.set(C(`${OKK[k]}/${id}`), v.at);
+      // 시사회관 패들렛 자동 올리기(Zapier가 padletQueue에 새 칸이 생기면 패들렛에 글을 씀). 본편만, 같은 영상은 한 번만
+      if (k === 'video') store.set(`padletQueue/${code}_${id}_${v.at}`, {
+        code, team: id, school: t.school, name: t.name, goal: t.goal, goalName: t.goalName || '',
+        title: `🎬 ${t.school} ${t.name} · SDGs ${t.goal}번`, body: `#30초로_지구를_구하라  “${t.action}”`, url: v.url, at: now(),
+      }, { quiet: true });
+    }
     if (b?.dataset.v === 'no') store.remove(C(`${OKK[k]}/${id}`));
     $('video', sh)?.pause();
     sh.hidden = true;
