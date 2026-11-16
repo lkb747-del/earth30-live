@@ -459,11 +459,15 @@ input[type="email"], input[type="password"] { background: #0A0E19; color: var(--
 .sc-hooks .hk .h { font-size: 2.6rem; }
 /* 시사회 팀 영상 (세로 영상 + 오른쪽에 팀·링·반응) */
 /* 시사회 영상: 화면 높이를 거의 다 쓰게 (세로 쇼츠 기준). 가로 영상이면 .wide로 16:9 넓게 */
-.vplay { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3vw; align-items: center; width: 100%; height: 100%; padding: 1vh 2vw; }
-.stage:has(.vplay) { padding: 0; }
-.vbox { height: calc(100vh - 2vh); max-width: 62vw; aspect-ratio: 9 / 16; background: #000; border: .4rem solid var(--c); border-radius: 2rem; overflow: hidden; display: grid; place-items: center; }
+.vplay { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 3vw; align-items: center; width: 100%; height: 100%; padding: 14px 2vw; }
+/* 고정된 무대(.stage = 실제로 보이는 화면) 높이에 맞춰서 브라우저 도구줄·작은 화면에서도 아래가 잘리지 않게 */
+.stage:has(.vplay) { padding: 0; display: block; }
+.vbox { height: 100%; max-height: 100%; max-width: 62vw; aspect-ratio: 9 / 16; background: #000; border: .4rem solid var(--c); border-radius: 2rem; overflow: hidden; display: grid; place-items: center; }
 .vbox.wide { height: auto; width: 62vw; aspect-ratio: 16 / 9; }
-.vplay:has(.vbox.wide) .card { zoom: .62; }
+.vplay .card { zoom: .8; max-height: 125%; overflow: hidden; width: 100%; min-width: 0; }
+.vplay .card .sub { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; }
+.vplay .react { flex-wrap: wrap; row-gap: 1rem; }
+.vplay:has(.vbox.wide) .card { zoom: .55; }
 .vbox video { width: 100%; height: 100%; object-fit: contain; background: #000; }
 .vhint { margin: 0; font-size: 2.6rem; font-weight: 700; color: var(--cue); }
 .vidb { font-size: 20px; padding: 14px; justify-content: center; width: 100%; background: transparent; border: 3px solid var(--cue); color: var(--cue); }
