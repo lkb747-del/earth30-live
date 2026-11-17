@@ -117,6 +117,12 @@ const LIVE = {
   premiere: (c) => VIEWS.premiere(c),
   reflect: (c) => VIEWS.reflect(c),
 };
+// 퀴즈 슬라이드(on.quiz)에서 팀 기기 투표를 켰거나 결과를 공개하면 슬라이드 대신 실시간 퀴즈 화면(투표 현황·학교별 결과)을 보여 준다
+function liveOf(sc, c) {
+  const q = c.quiz || {};
+  if (sc.kind === 'slide' && sc.on?.quiz && q.poll && q.poll[0] === sc.on.quiz[0] && (q.device || q.revealed)) return { ...sc, kind: 'live', live: 'quiz', theme: undefined };
+  return sc;
+}
 function sceneHtml(sc, c) {
   // PPT 슬라이드 그림 장면: 교사가 PPT에서 고친 그대로 보여 준다. timer = [왼쪽 %, 위 %, 너비 %, 높이 %] 자리에 실시간 남은 시간
   if (sc.kind === 'slide') {
@@ -141,8 +147,9 @@ function render() {
   const st = L.stages.find((s) => s.id === c.stage) || L.stages[0];
   const sc = sceneOf(L, c);
   $('#stageName').innerHTML = `<small>${L.scenes.indexOf(sc) + 1}/${L.scenes.length}</small>${esc(st.name)}`;
-  const html = sceneHtml(sc, c);
-  document.body.classList.toggle('slidemode', sc.kind === 'slide');
+  const shown = liveOf(sc, c);
+  const html = sceneHtml(shown, c);
+  document.body.classList.toggle('slidemode', shown.kind === 'slide');
   if (html !== lastHtml) { $('#view').innerHTML = html; lastHtml = html; }
   watchGauge(gaugeV(c, L));
   showAlert(c.alert, now());
