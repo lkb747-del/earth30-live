@@ -559,3 +559,5 @@ body.tv.slidemode .s-main { padding: 0; }
 .btn.albumb { display: block; text-align: center; text-decoration: none; background: #1E9BD7; border-color: #1E9BD7; color: #fff; margin-bottom: 8px; }
 .up-box.links .uplink { display: block; text-align: center; text-decoration: none; margin: 8px 0; color: #fff; }
 .uplink.album { background: #1E9BD7; border-color: #1E9BD7; } .uplink.canva { background: #7D2AE8; border-color: #7D2AE8; } .uplink.prom { background: #FF8A3D; border-color: #FF8A3D; color: #2a1200; }
+
+.m-top .btn.albumqr { padding: 6px 12px; font-size: 15px; background: #1E9BD7; border-color: #1E9BD7; color: #fff; width: auto; }

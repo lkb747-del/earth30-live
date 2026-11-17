@@ -251,6 +251,18 @@ async function openQr() {
   qrOpen = true;
   renderSheet();
 }
+/** 탐험 앨범 QR: 공개 패들렛 주소만 담음 (PIN 없음) — 개인 기기로 찍어서 바로 사진 올리기 */
+async function openAlbumQr() {
+  const url = L.albumPadlet;
+  let svg;
+  try { svg = await qrSvg(url); } catch { svg = '<p>QR을 만들지 못했어요. 아래 주소를 휴대폰에 입력해요</p>'; }
+  qrHtml = `<div class="m-card"><h3>${esc(L.albumQrTitle)}</h3><div class="qr-box">${svg}</div>
+    <p style="margin:0;text-align:center">${esc(L.albumQrHow)}</p><p class="qr-url">${esc(url)}</p>
+    <button class="btn" data-qr="close">닫기</button></div>`;
+  qrOpen = true;
+  renderSheet();
+}
+$('#albumQr').onclick = openAlbumQr;
 $('#sheet').onclick = (e) => {
   if (qrOpen) {
     if (e.target.closest('[data-qr]') || e.target === $('#sheet')) { qrOpen = false; renderSheet(); }
