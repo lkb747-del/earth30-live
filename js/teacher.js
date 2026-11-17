@@ -199,7 +199,8 @@ function renderQuiz() {
     const cur = q.poll === p.id;
     const n = Object.keys(S.votes?.[p.id] || {}).length;
     const st = cur ? (q.revealed ? '📊 공개됨' : !dev ? '✋ 손 투표 중' : q.open ? '🟢 투표 중' : '🔒 마감') : '';
-    const canReveal = cur && !q.revealed && (!dev || !q.open);
+    // 마감을 안 눌러도 「결과 공개」를 누르면 마감과 공개가 한 번에 된다
+    const canReveal = cur && !q.revealed;
     return `<div class="qrow ${cur ? 'on' : ''}"><div><b>${esc(p.label)}</b><small>${esc(p.cards.map((c) => c.text.split('\n')[0]).join(' / '))}</small></div>
       <span class="muted small">${dev ? `${n}/${TEAMS.length}팀 ` : ''}${st}</span>
       <div class="row"><button class="btn sm go" data-q="open" data-p="${p.id}" ${cur && q.open && !q.revealed ? 'disabled' : ''}>${dev ? '열기' : '카드 보여 주기'}</button>
