@@ -251,13 +251,16 @@ async function openQr() {
   qrOpen = true;
   renderSheet();
 }
-/** 탐험 앨범 QR: 공개 패들렛 주소만 담음 (PIN 없음) — 개인 기기로 찍어서 바로 사진 올리기 */
+/** 내 기기로 열기 QR: 공개 패들렛 주소만 담음 (PIN 없음) — 탐험 앨범 · 실천 약속 */
 async function openAlbumQr() {
-  const url = L.albumPadlet;
-  let svg;
-  try { svg = await qrSvg(url); } catch { svg = '<p>QR을 만들지 못했어요. 아래 주소를 휴대폰에 입력해요</p>'; }
-  qrHtml = `<div class="m-card"><h3>${esc(L.albumQrTitle)}</h3><div class="qr-box">${svg}</div>
-    <p style="margin:0;text-align:center">${esc(L.albumQrHow)}</p><p class="qr-url">${esc(url)}</p>
+  const one = async (url, title, how) => {
+    let svg;
+    try { svg = await qrSvg(url); } catch { svg = '<p>QR을 만들지 못했어요</p>'; }
+    return `<div class="qr2"><h4>${esc(title)}</h4><div class="qr-box">${svg}</div><p>${esc(how)}</p></div>`;
+  };
+  const a = await one(L.albumPadlet, L.albumQrTitle, L.albumQrHow);
+  const b = await one(L.promisePadlet, L.promiseQrTitle, L.promiseQrHow);
+  qrHtml = `<div class="m-card qrwide"><h3>📱 휴대폰 · 태블릿 카메라로 찍어요</h3><div class="qr2s">${a}${b}</div>
     <button class="btn" data-qr="close">닫기</button></div>`;
   qrOpen = true;
   renderSheet();

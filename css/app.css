@@ -561,3 +561,9 @@ body.tv.slidemode .s-main { padding: 0; }
 .uplink.album { background: #1E9BD7; border-color: #1E9BD7; } .uplink.canva { background: #7D2AE8; border-color: #7D2AE8; } .uplink.prom { background: #FF8A3D; border-color: #FF8A3D; color: #2a1200; }
 
 .m-top .btn.albumqr { padding: 6px 12px; font-size: 15px; background: #1E9BD7; border-color: #1E9BD7; color: #fff; width: auto; }
+.sheet .m-card.qrwide { max-width: 760px; width: min(760px, 94vw); max-height: 92vh; overflow-y: auto; }
+.qr2s { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
+.qr2 { flex: 1 1 260px; text-align: center; }
+.qr2 h4 { margin: 0 0 8px; font-size: 22px; }
+.qr2 .qr-box { width: min(260px, 70vw); }
+.qr2 p { margin: 8px 0 0; font-size: 15px; }
