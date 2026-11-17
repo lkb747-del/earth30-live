@@ -88,7 +88,12 @@ function box(k) {
     <p class="muted small">${esc(T2.note)}</p></section>`;
 }
 function render() {
-  $('#view').innerHTML = box('video') + box('ng');
+  // 개인 휴대폰 바로가기: 증거 사진 꺼내기(탐험 앨범) · 편집(캔바) · 실천 약속
+  const links = `<section class="up-box links"><h2>🔗 바로가기</h2>
+    <a class="btn uplink album" href="${esc(L.albumPadlet)}" target="_blank" rel="noopener">${esc(L.albumGo)}</a>
+    ${me.canva ? `<a class="btn uplink canva" href="${esc(me.canva)}" target="_blank" rel="noopener">🎨 우리 팀 캔바 양식</a>` : ''}
+    <a class="btn uplink prom" href="${esc(L.promisePadlet)}" target="_blank" rel="noopener">${esc(L.promiseGo)}</a></section>`;
+  $('#view').innerHTML = links + box('video') + box('ng');
   document.querySelectorAll('#view input[type=file]').forEach((el) => { el.onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) send(f, el.dataset.k); }; });
 }
 

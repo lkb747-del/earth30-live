@@ -166,6 +166,7 @@ const VIEWS = {
         ${L.cuts.map((c) => `<button class="check ${d.progress?.[c.id] ? 'on' : ''}" data-act="cut" data-k="${c.id}">${esc(c.name)}<small>${esc(c.sec)}</small></button>`).join('')}
         <a class="btn promgo" href="${esc(L.promisePadlet)}" target="_blank" rel="noopener">${esc(L.promiseGo)}</a>
         <button class="check ${d.promise ? 'on' : ''}" data-act="promise">${esc(L.promiseCheck)}</button>
+        <a class="btn albumb" href="${esc(L.albumPadlet)}" target="_blank" rel="noopener">${esc(L.albumGo)}</a>
         ${me.canva ? `<a class="btn canvab" href="${esc(me.canva)}" target="_blank" rel="noopener">🎨 우리 팀 캔바 양식 열기</a>` : ''}
         ${videoButton(d, c)}
         <button class="btn upl ${d.uploaded ? 'done' : ''}" data-act="upload" ${d.uploaded ? 'disabled' : ''}>${d.uploaded ? '✅ 업로드 완료!' : '📤 다른 곳(패들렛)에 올렸어요'}</button>

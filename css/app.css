@@ -555,3 +555,7 @@ body.tv.slidemode .s-main { padding: 0; }
 /* 팀 화면: 캔바 양식 바로가기 */
 .btn.canvab { display: block; text-align: center; text-decoration: none; background: #7D2AE8; border-color: #7D2AE8; color: #fff; margin-bottom: 8px; }
 .btn.promgo { display: block; text-align: center; text-decoration: none; background: #FF8A3D; border-color: #FF8A3D; color: #2a1200; margin: 6px 0; }
+/* 탐험 앨범 · 휴대폰 바로가기 */
+.btn.albumb { display: block; text-align: center; text-decoration: none; background: #1E9BD7; border-color: #1E9BD7; color: #fff; margin-bottom: 8px; }
+.up-box.links .uplink { display: block; text-align: center; text-decoration: none; margin: 8px 0; color: #fff; }
+.uplink.album { background: #1E9BD7; border-color: #1E9BD7; } .uplink.canva { background: #7D2AE8; border-color: #7D2AE8; } .uplink.prom { background: #FF8A3D; border-color: #FF8A3D; color: #2a1200; }
